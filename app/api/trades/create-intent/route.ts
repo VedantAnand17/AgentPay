@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Create x402 payment request
-    const paymentRequest = await createX402PaymentRequest(intent);
+    const paymentRequest = createX402PaymentRequest(intent);
 
     // Store payment request ID on intent
     intent.paymentRequestId = paymentRequest.paymentRequestId;

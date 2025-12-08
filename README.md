@@ -8,13 +8,14 @@ AgentPay Relay is a full-stack Web3 application that enables users to execute le
 
 ### Flow
 
-1. User configures a trade (agent, symbol, side, size, leverage)
-2. Backend creates a TradeIntent + x402 Payment Request
-3. Frontend triggers a real x402 payment (via SDK/HTTP, NOT on-chain contract calls)
-4. Backend verifies the x402 payment via x402's API/SDK
-5. Backend opens a perp position on Base Sepolia using an execution wallet
-6. Backend returns the perp tx hash + execution info
-7. UI shows a full execution receipt
+1. User configures a trade (agent, symbol, side, size, leverage) and connects wallet
+2. Backend creates a TradeIntent with payment configuration
+3. User clicks "Execute Trade" - frontend uses x402 client library
+4. x402 client automatically handles payment via wallet (shows payment confirmation UI)
+5. Backend uses x402 middleware to verify payment before executing
+6. Backend opens a perp position on Base Sepolia using an execution wallet
+7. Backend returns the perp tx hash + execution info
+8. UI shows a full execution receipt
 
 ## Tech Stack
 
@@ -24,7 +25,7 @@ AgentPay Relay is a full-stack Web3 application that enables users to execute le
 - **Styling**: Tailwind CSS
 - **Web3**: viem for Base Sepolia interaction
 - **Database**: SQLite (better-sqlite3) for MVP
-- **Payment**: x402 integrated as HTTP/SDK client (not a contract)
+- **Payment**: x402 integrated using `x402-fetch` (frontend) and `x402-express` middleware pattern (backend, adapted for Next.js)
 
 ## Environment Variables
 
@@ -36,9 +37,14 @@ BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
 PERP_CONTRACT_ADDRESS=0x...  # Your perp contract address on Base Sepolia
 EXECUTION_PRIVATE_KEY=0x...  # Private key of execution wallet (must have funds for gas)
 
-# x402 Integration
-X402_API_KEY=your_x402_api_key
-X402_BASE_URL=https://api.x402.com/v1
+# x402 Integration (no API keys needed - wallet-based)
+# You can use either X402_PAYMENT_ADDRESS or ADDRESS (x402-Learn pattern)
+X402_PAYMENT_ADDRESS=0x...  # Address to receive payments (or use ADDRESS)
+ADDRESS=0x...  # Alternative: wallet address to receive payments
+X402_ASSET_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913  # USDC on Base
+X402_NETWORK=base-sepolia  # Network for payments (base-sepolia or base)
+X402_ENV=testnet  # Set to "mainnet" to use Coinbase facilitator on mainnet
+FACILITATOR_URL=https://x402.org/facilitator  # Optional: custom facilitator URL
 
 # Database (optional)
 DATABASE_PATH=./agentpay.db
@@ -91,7 +97,8 @@ AgentPay/
 │   ├── db.ts                     # SQLite database operations
 │   ├── perp.ts                   # Base Sepolia perp contract interaction
 │   ├── types.ts                  # TypeScript type definitions
-│   └── x402.ts                   # x402 payment integration
+│   ├── x402.ts                   # x402 payment configuration
+│   └── x402-middleware.ts        # x402 middleware for Next.js API routes
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -114,16 +121,27 @@ Each agent returns a deterministic suggestion with:
 - `leverage`: Between 2–5
 - `reason`: Explanation of the suggestion
 
-### x402 Integration (`lib/x402.ts`)
+### x402 Integration (`lib/x402.ts` and `lib/x402-middleware.ts`)
 
-Handles payment requests via x402's HTTP API (not on-chain):
+x402 integration uses wallet-based payments (no API keys required), based on the x402-Learn integration pattern:
 
-- `createX402PaymentRequest()`: Creates a one-time payment request for a trade
-- `verifyX402Payment()`: Checks payment status via x402 API
+- **Frontend**: Uses `x402-fetch` library
+  - User connects wallet
+  - `x402Fetch()` automatically handles payments via wallet UI when making requests
+  - Detects 402 Payment Required responses and shows payment confirmation UI
+  - Payment is handled seamlessly in the background
 
-**Note**: The current implementation includes mock functions. Replace with actual x402 API calls in production:
-- POST to `{X402_BASE_URL}/payment-requests` to create requests
-- GET from `{X402_BASE_URL}/payment-requests/{id}` to verify status
+- **Backend**: Uses x402 middleware pattern (adapted for Next.js)
+  - `x402PaymentRequired()` middleware wraps API routes
+  - Payment is verified automatically before handler executes
+  - If payment not verified, returns 402 Payment Required with payment details
+  - Based on `x402-express` middleware pattern, adapted for Next.js Request/Response
+
+**Implementation Details**:
+- Uses `@coinbase/x402` for facilitator configuration
+- Supports both testnet (base-sepolia) and mainnet (base) via `X402_ENV` environment variable
+- Payment configuration matches x402-Learn pattern with price, network, and metadata
+- x402 shows wallet confirmation UI automatically when payment is required
 
 ### Perp Contract (`lib/perp.ts`)
 
@@ -201,25 +219,52 @@ Main trading interface with:
 
 1. **Create Intent**: User fills trade form and clicks "Create Payment Request"
    - Backend creates `TradeIntent` with status "pending"
-   - Backend calls `createX402PaymentRequest()` to get payment request ID
-   - Frontend displays payment amount and request ID
+   - Frontend displays payment amount and trade details
 
-2. **Complete Payment**: User completes payment via x402 UI/SDK
-   - In production, user would be redirected to x402 payment page
-   - For MVP, user clicks "Mark Payment Complete & Execute" after completing payment
+2. **Connect Wallet**: User connects their wallet
+   - Frontend uses wallet connector (e.g., wagmi, web3modal)
+   - `x402Client.setWallet(wallet)` configures x402 client
 
-3. **Verify & Execute**: User clicks "Mark Payment Complete & Execute"
-   - Backend calls `verifyX402Payment()` to check payment status
-   - If paid, backend calls `openPerpPositionOnBaseSepolia()` to execute trade
-   - Backend creates `ExecutedTrade` record with tx hash and entry price
-   - Frontend displays execution receipt
+3. **Execute Trade**: User clicks "Execute Trade"
+   - Frontend uses `x402Client.fetch("/api/trades/execute", ...)`
+   - x402 client automatically detects payment requirement
+   - Wallet UI shows payment confirmation (amount, token, resource)
+   - User approves payment in wallet
+
+4. **Verify & Execute**: Backend receives request
+   - x402 middleware verifies payment from request headers
+   - If payment verified, handler executes:
+     - Calls `openPerpPositionOnBaseSepolia()` to execute trade
+     - Creates `ExecutedTrade` record with tx hash and entry price
+   - If payment not verified, returns 402 Payment Required
+
+5. **Display Result**: Frontend receives execution result
+   - Shows execution receipt with tx hash, entry price, etc.
+   - Refreshes recent trades list
 
 ## Development Notes
 
-- The x402 integration uses mock implementations. Replace with real API calls in `lib/x402.ts`
-- The perp contract ABI is simplified. Replace with actual contract ABI in `lib/perp.ts`
-- Database file (`agentpay.db`) is created automatically on first run
-- All agent strategies use mock price data. In production, integrate with real market data APIs
+- **x402 Integration**: 
+  - Frontend: Uses `x402-fetch` for automatic payment handling (integrated from x402-Learn)
+  - Backend: Uses `x402-express` middleware pattern, adapted for Next.js API routes
+  - No API keys needed - x402 uses wallet-based payments
+  - Supports both testnet and mainnet via `X402_ENV` environment variable
+  - Integration follows the same pattern as x402-Learn project
+
+- **Wallet Integration**: 
+  - Currently uses a mock wallet connector
+  - In production, integrate with wagmi, web3modal, or your preferred wallet connector
+  - x402 works with any wallet that supports standard signing methods
+
+- **Perp Contract**: 
+  - The contract ABI is simplified. Replace with actual contract ABI in `lib/perp.ts`
+  - Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas
+
+- **Database**: 
+  - Database file (`agentpay.db`) is created automatically on first run
+
+- **Agent Strategies**: 
+  - All agent strategies use mock price data. In production, integrate with real market data APIs
 
 ## License
 

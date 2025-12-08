@@ -4,6 +4,11 @@
 import { useState, useEffect } from "react";
 import { Agent, TradeIntent, ExecutedTrade } from "@/lib/types";
 
+// x402 client integration
+// NOTE: x402-fetch will be used when wallet is properly integrated
+// For MVP, we'll use a wrapper that handles the x402 payment flow
+// In production: import x402Fetch from "x402-fetch";
+
 export default function TradePage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>("");
@@ -12,6 +17,7 @@ export default function TradePage() {
   const [size, setSize] = useState<string>("0.01");
   const [leverage, setLeverage] = useState<string>("2");
   const [userAddress, setUserAddress] = useState<string>("");
+  const [wallet, setWallet] = useState<any>(null);
   const [suggestion, setSuggestion] = useState<any>(null);
   const [tradeIntent, setTradeIntent] = useState<TradeIntent | null>(null);
   const [executedTrade, setExecutedTrade] = useState<any>(null);
@@ -34,6 +40,30 @@ export default function TradePage() {
       .then((data) => setRecentTrades(data))
       .catch((err) => console.error("Failed to load trades:", err));
   }, []);
+
+  // Connect wallet and initialize x402 client
+  const handleConnectWallet = async () => {
+    try {
+      // In production, use your wallet connector (e.g., wagmi, web3modal, etc.)
+      // Example: const wallet = await connectWallet();
+      // For MVP, we'll use the userAddress as the wallet
+      if (!userAddress) {
+        setError("Please enter a wallet address");
+        return;
+      }
+      
+      // Mock wallet object (in production, use real wallet from connector)
+      const mockWallet = {
+        address: userAddress as `0x${string}`,
+        // In production, wallet would have sign methods, etc.
+        // x402-fetch will use the wallet to sign payment transactions
+      };
+      
+      setWallet(mockWallet);
+    } catch (err: any) {
+      setError(`Failed to connect wallet: ${err.message}`);
+    }
+  };
 
   const handleGetSuggestion = async () => {
     if (!selectedAgent || !symbol) {
@@ -109,14 +139,38 @@ export default function TradePage() {
       return;
     }
 
+    if (!wallet) {
+      setError("Please connect your wallet first");
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/trades/execute", {
+      // Use x402 protocol: make request, handle 402 Payment Required response
+      // In production with x402-fetch:
+      // import x402Fetch from "x402-fetch";
+      // const res = await x402Fetch("/api/trades/execute", { ... });
+      // x402-fetch automatically handles 402 responses and wallet payment UI
+      
+      let res = await fetch("/api/trades/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tradeIntentId: tradeIntent.id }),
       });
+
+      // Handle 402 Payment Required (x402 protocol)
+      if (res.status === 402) {
+        const paymentData = await res.json();
+        // In production, x402-fetch would:
+        // 1. Parse payment details from 402 response
+        // 2. Show wallet payment UI
+        // 3. Wait for payment confirmation
+        // 4. Retry original request with payment proof
+        
+        // For MVP, show payment info and allow retry
+        throw new Error(`Payment required: ${paymentData.config?.amount || "unknown"} USDC. Please complete payment and try again.`);
+      }
 
       if (!res.ok) {
         const data = await res.json();
@@ -131,7 +185,12 @@ export default function TradePage() {
       const tradesData = await tradesRes.json();
       setRecentTrades(tradesData);
     } catch (err: any) {
-      setError(err.message);
+      // Handle payment errors
+      if (err.message.includes("Payment required") || err.message.includes("payment")) {
+        setError("Payment required. Please complete the payment in your wallet.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -165,13 +224,39 @@ export default function TradePage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Wallet Address</label>
-                  <input
-                    type="text"
-                    value={userAddress}
-                    onChange={(e) => setUserAddress(e.target.value)}
-                    placeholder="0x..."
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={userAddress}
+                      onChange={(e) => setUserAddress(e.target.value)}
+                      placeholder="0x..."
+                      className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                      disabled={!!wallet}
+                    />
+                    {!wallet && (
+                      <button
+                        onClick={handleConnectWallet}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        Connect
+                      </button>
+                    )}
+                    {wallet && (
+                      <button
+                        onClick={() => {
+                          setWallet(null);
+                        }}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                      >
+                        Disconnect
+                      </button>
+                    )}
+                  </div>
+                  {wallet && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      ✓ Wallet connected: {formatAddress(wallet.address)}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -301,10 +386,10 @@ export default function TradePage() {
 
                 <button
                   onClick={handleExecuteTrade}
-                  disabled={loading || !tradeIntent}
+                  disabled={loading || !tradeIntent || !wallet}
                   className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Mark Payment Complete & Execute
+                  Execute Trade (x402 payment handled automatically)
                 </button>
 
                 {executedTrade && (
