@@ -4,45 +4,54 @@ import path from "path";
 import { TradeIntent, ExecutedTrade } from "./types";
 
 const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "agentpay.db");
-const db = new Database(dbPath);
 
-// Initialize tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS trade_intents (
-    id TEXT PRIMARY KEY,
-    userAddress TEXT NOT NULL,
-    agentId TEXT NOT NULL,
-    symbol TEXT NOT NULL,
-    side TEXT NOT NULL CHECK(side IN ('long', 'short')),
-    size REAL NOT NULL,
-    leverage INTEGER NOT NULL,
-    expectedPaymentAmount TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('pending', 'paid', 'executed')),
-    paymentRequestId TEXT,
-    createdAt INTEGER NOT NULL
-  );
+// Lazy database initialization to avoid build-time issues
+let db: Database.Database | null = null;
 
-  CREATE TABLE IF NOT EXISTS executed_trades (
-    id TEXT PRIMARY KEY,
-    tradeIntentId TEXT NOT NULL,
-    paymentRequestId TEXT,
-    paymentStatus TEXT NOT NULL CHECK(paymentStatus IN ('paid', 'failed')),
-    perpTxHash TEXT NOT NULL,
-    entryPrice REAL NOT NULL,
-    timestamp INTEGER NOT NULL,
-    status TEXT NOT NULL DEFAULT 'executed',
-    FOREIGN KEY (tradeIntentId) REFERENCES trade_intents(id)
-  );
+function getDb(): Database.Database {
+  if (!db) {
+    db = new Database(dbPath);
+    
+    // Initialize tables
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS trade_intents (
+        id TEXT PRIMARY KEY,
+        userAddress TEXT NOT NULL,
+        agentId TEXT NOT NULL,
+        symbol TEXT NOT NULL,
+        side TEXT NOT NULL CHECK(side IN ('long', 'short')),
+        size REAL NOT NULL,
+        leverage INTEGER NOT NULL,
+        expectedPaymentAmount TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('pending', 'paid', 'executed')),
+        paymentRequestId TEXT,
+        createdAt INTEGER NOT NULL
+      );
 
-  CREATE INDEX IF NOT EXISTS idx_trade_intents_user ON trade_intents(userAddress);
-  CREATE INDEX IF NOT EXISTS idx_trade_intents_status ON trade_intents(status);
-  CREATE INDEX IF NOT EXISTS idx_executed_trades_timestamp ON executed_trades(timestamp DESC);
-`);
+      CREATE TABLE IF NOT EXISTS executed_trades (
+        id TEXT PRIMARY KEY,
+        tradeIntentId TEXT NOT NULL,
+        paymentRequestId TEXT,
+        paymentStatus TEXT NOT NULL CHECK(paymentStatus IN ('paid', 'failed')),
+        perpTxHash TEXT NOT NULL,
+        entryPrice REAL NOT NULL,
+        timestamp INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'executed',
+        FOREIGN KEY (tradeIntentId) REFERENCES trade_intents(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_trade_intents_user ON trade_intents(userAddress);
+      CREATE INDEX IF NOT EXISTS idx_trade_intents_status ON trade_intents(status);
+      CREATE INDEX IF NOT EXISTS idx_executed_trades_timestamp ON executed_trades(timestamp DESC);
+    `);
+  }
+  return db;
+}
 
 // Trade Intent operations
 export const tradeIntents = {
   create: (intent: TradeIntent): void => {
-    db.prepare(`
+    getDb().prepare(`
       INSERT INTO trade_intents (
         id, userAddress, agentId, symbol, side, size, leverage,
         expectedPaymentAmount, status, paymentRequestId, createdAt
@@ -63,7 +72,7 @@ export const tradeIntents = {
   },
 
   getById: (id: string): TradeIntent | null => {
-    const row = db.prepare("SELECT * FROM trade_intents WHERE id = ?").get(id) as any;
+    const row = getDb().prepare("SELECT * FROM trade_intents WHERE id = ?").get(id) as any;
     if (!row) return null;
     return {
       id: row.id,
@@ -82,13 +91,13 @@ export const tradeIntents = {
 
   updateStatus: (id: string, status: "pending" | "paid" | "executed", paymentRequestId?: string): void => {
     if (paymentRequestId) {
-      db.prepare("UPDATE trade_intents SET status = ?, paymentRequestId = ? WHERE id = ?").run(
+      getDb().prepare("UPDATE trade_intents SET status = ?, paymentRequestId = ? WHERE id = ?").run(
         status,
         paymentRequestId,
         id
       );
     } else {
-      db.prepare("UPDATE trade_intents SET status = ? WHERE id = ?").run(status, id);
+      getDb().prepare("UPDATE trade_intents SET status = ? WHERE id = ?").run(status, id);
     }
   },
 };
@@ -96,7 +105,7 @@ export const tradeIntents = {
 // Executed Trade operations
 export const executedTrades = {
   create: (trade: ExecutedTrade): void => {
-    db.prepare(`
+    getDb().prepare(`
       INSERT INTO executed_trades (
         id, tradeIntentId, paymentRequestId, paymentStatus,
         perpTxHash, entryPrice, timestamp, status
@@ -114,7 +123,7 @@ export const executedTrades = {
   },
 
   getAll: (limit: number = 50): Array<ExecutedTrade & { tradeIntent?: TradeIntent }> => {
-    const rows = db.prepare(`
+    const rows = getDb().prepare(`
       SELECT 
         et.*,
         ti.userAddress,
@@ -154,5 +163,5 @@ export const executedTrades = {
   },
 };
 
-export default db;
+export default getDb;
 

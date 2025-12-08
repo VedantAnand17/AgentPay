@@ -1,5 +1,5 @@
 // Perp/Uniswap contract interaction on Base Sepolia
-import { createWalletClient, http, parseEther, formatEther } from "viem";
+import { createWalletClient, createPublicClient, http, parseEther, formatEther } from "viem";
 import { baseSepolia } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -88,7 +88,10 @@ export async function openPerpPositionOnBaseSepolia(args: {
     });
 
     // Wait for transaction receipt
-    const publicClient = client.extend({ chain: baseSepolia, transport: http(BASE_SEPOLIA_RPC_URL) });
+    const publicClient = createPublicClient({
+      chain: baseSepolia,
+      transport: http(BASE_SEPOLIA_RPC_URL),
+    });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
     // Mock entry price calculation
