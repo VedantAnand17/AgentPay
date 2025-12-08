@@ -46,6 +46,10 @@ X402_NETWORK=base-sepolia  # Network for payments (base-sepolia or base)
 X402_ENV=testnet  # Set to "mainnet" to use Coinbase facilitator on mainnet
 FACILITATOR_URL=https://x402.org/facilitator  # Optional: custom facilitator URL
 
+# WalletConnect (for Web3Modal wallet connection)
+# Get your project ID from https://cloud.walletconnect.com
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id-here
+
 # Database (optional)
 DATABASE_PATH=./agentpay.db
 
