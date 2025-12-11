@@ -1,77 +1,190 @@
 // x402 middleware adapter for Next.js API routes
 // Adapts x402-express paymentMiddleware pattern for Next.js
 import { NextRequest, NextResponse } from "next/server";
-import { paymentMiddleware } from "x402-express";
+import { exact } from "x402/schemes";
+import { useFacilitator } from "x402/verify";
+import { findMatchingPaymentRequirements, processPriceToAtomicAmount } from "x402/shared";
+import { getAddress } from "viem";
+import type {
+  PaymentPayload,
+  PaymentRequirements,
+  VerifyResponse,
+  SettleResponse,
+  Network,
+  Price,
+  ERC20TokenAmount,
+} from "x402/types";
 import { getX402PaymentConfig, facilitatorConfig, getPaymentAddress } from "./x402";
 import { TradeIntent } from "./types";
 
-// Since Next.js doesn't use Express, we need to adapt the middleware pattern
-// The x402-express middleware expects Express req/res objects, so we'll
-// create a wrapper that handles payment verification manually
+// x402 protocol version
+const X402_VERSION = 1;
 
 /**
- * Verify x402 payment from request headers
- * 
- * x402 middleware adds headers after payment verification:
- * - X-PAYMENT: Payment information
- * - X-Payment-Response: Payment verification response
+ * Build payment requirements from config
+ * This matches the format expected by x402 protocol
  */
-export function verifyX402PaymentFromRequest(request: NextRequest): {
+function buildPaymentRequirements(
+  payTo: `0x${string}`,
+  price: Price,
+  network: Network,
+  config: Record<string, unknown>,
+  resource: string,
+  method: string
+): PaymentRequirements {
+  // Process price to get atomic amount and asset
+  const atomicAmountForAsset = processPriceToAtomicAmount(price, network);
+  if ("error" in atomicAmountForAsset) {
+    throw new Error(atomicAmountForAsset.error);
+  }
+  const { maxAmountRequired, asset } = atomicAmountForAsset;
+
+  // Extract config fields
+  const {
+    description = "",
+    mimeType = "application/json",
+    maxTimeoutSeconds = 300,
+    inputSchema = {},
+    outputSchema = {},
+    metadata = {},
+  } = config;
+
+  // Ensure inputSchema is an object
+  const inputSchemaObj = typeof inputSchema === "object" && inputSchema !== null ? inputSchema : {};
+  const outputSchemaObj = typeof outputSchema === "object" && outputSchema !== null ? outputSchema : {};
+
+  return {
+    scheme: "exact",
+    network,
+    maxAmountRequired,
+    resource,
+    description: description as string,
+    mimeType: mimeType as string,
+    payTo: getAddress(payTo),
+    maxTimeoutSeconds: maxTimeoutSeconds as number,
+    asset: getAddress((asset as ERC20TokenAmount["asset"]).address),
+    outputSchema: {
+      input: {
+        type: "http",
+        method,
+        discoverable: true,
+        ...(inputSchemaObj as Record<string, unknown>),
+      },
+      output: outputSchemaObj,
+    },
+    extra: (asset as ERC20TokenAmount["asset"]).eip712,
+  } as PaymentRequirements;
+}
+
+// Note: findMatchingPaymentRequirements is imported from x402/shared
+
+/**
+ * Verify x402 payment from request headers using facilitator
+ */
+async function verifyX402Payment(
+  request: NextRequest,
+  paymentRequirements: PaymentRequirements
+): Promise<{
   isValid: boolean;
   paymentId?: string;
-  paymentInfo?: any;
-} {
-  // Check for x402 payment verification headers
+  paymentInfo?: PaymentPayload;
+  verifyResponse?: VerifyResponse;
+  error?: string;
+}> {
   const paymentHeader = request.headers.get("X-PAYMENT");
-  const paymentResponseHeader = request.headers.get("X-Payment-Response");
   
-  // x402 middleware sets these headers when payment is verified
-  if (paymentHeader && paymentResponseHeader) {
-    try {
-      const paymentInfo = JSON.parse(paymentHeader);
-      return {
-        isValid: true,
-        paymentId: paymentInfo.id || paymentInfo.paymentId,
-        paymentInfo,
-      };
-    } catch (e) {
-      // Header exists but not valid JSON - payment might be required
-      return { isValid: false };
-    }
+  if (!paymentHeader) {
+    return { isValid: false, error: "X-PAYMENT header is required" };
   }
-  
-  return { isValid: false };
+
+  try {
+    // Decode payment header
+    const decodedPayment = exact.evm.decodePayment(paymentHeader);
+    decodedPayment.x402Version = X402_VERSION;
+
+    // Get facilitator verify function
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { verify } = useFacilitator(facilitatorConfig);
+
+    // Find matching requirements
+    const selectedRequirements = findMatchingPaymentRequirements(
+      [paymentRequirements],
+      decodedPayment
+    );
+
+    if (!selectedRequirements) {
+      return {
+        isValid: false,
+        error: "Unable to find matching payment requirements",
+      };
+    }
+
+    // Verify payment with facilitator
+    const verifyResponse = await verify(decodedPayment, selectedRequirements);
+
+    if (!verifyResponse.isValid) {
+      return {
+        isValid: false,
+        error: verifyResponse.invalidReason || "Payment verification failed",
+      };
+    }
+
+    // Extract payment ID from verify response or payment payload
+    const paymentId = verifyResponse.payer || 
+      (decodedPayment.payload && typeof decodedPayment.payload === "object" && "id" in decodedPayment.payload 
+        ? (decodedPayment.payload as any).id 
+        : undefined);
+
+    return {
+      isValid: true,
+      paymentId,
+      paymentInfo: decodedPayment,
+      verifyResponse,
+    };
+  } catch (error) {
+    return {
+      isValid: false,
+      error: error instanceof Error ? error.message : "Payment verification failed",
+    };
+  }
 }
 
 /**
  * Create x402 payment required response
  * 
  * Returns a 402 response with payment information that x402 client can use
+ * Format matches x402 protocol specification
  */
 export function createPaymentRequiredResponse(
   config: {
     price: string;
     network: string;
-    address: string;
+    address: `0x${string}`;
     config?: Record<string, unknown>;
-  }
+  },
+  resource: string,
+  method: string
 ): NextResponse {
+  const paymentRequirements: PaymentRequirements = buildPaymentRequirements(
+    config.address,
+    config.price as Price,
+    config.network as Network,
+    config.config || {},
+    resource,
+    method
+  );
+
   return NextResponse.json(
     {
-      error: "Payment required",
-      x402PaymentRequired: true,
-      payment: {
-        price: config.price,
-        network: config.network,
-        address: config.address,
-        config: config.config,
-      },
+      x402Version: X402_VERSION,
+      error: "X-PAYMENT header is required",
+      accepts: [paymentRequirements],
     },
     {
       status: 402, // 402 Payment Required
       headers: {
+        "Content-Type": "application/json",
         "WWW-Authenticate": `x402 price="${config.price}", network="${config.network}", address="${config.address}"`,
-        "X-Payment-Required": "true",
       },
     }
   );
@@ -81,8 +194,8 @@ export function createPaymentRequiredResponse(
  * x402 payment middleware for Next.js API routes
  * 
  * This wraps handlers to require x402 payment before execution.
- * The payment verification is handled by x402-express middleware pattern,
- * but adapted for Next.js Request/Response objects.
+ * Payment is verified with the facilitator before handler execution,
+ * and settled after successful response.
  * 
  * Usage:
  * ```ts
@@ -105,20 +218,64 @@ export function x402PaymentRequired(
     address: `0x${string}`;
     config?: Record<string, unknown>;
   },
-  handler: (request: NextRequest, paymentInfo?: any) => Promise<NextResponse>
+  handler: (request: NextRequest, paymentInfo?: PaymentPayload) => Promise<NextResponse>
 ) {
   return async (request: NextRequest): Promise<NextResponse> => {
-    // Verify payment from request headers
-    const verification = verifyX402PaymentFromRequest(request);
+    const resource = `${request.nextUrl.protocol}//${request.nextUrl.host}${request.nextUrl.pathname}`;
+    const method = request.method;
+
+    // Build payment requirements
+    const paymentRequirements = buildPaymentRequirements(
+      config.address,
+      config.price as Price,
+      config.network as Network,
+      config.config || {},
+      resource,
+      method
+    );
+
+    // Verify payment with facilitator
+    const verification = await verifyX402Payment(request, paymentRequirements);
     
     if (!verification.isValid) {
       // Payment not verified - return payment required response
       // x402 client will handle this and show payment UI
-      return createPaymentRequiredResponse(config);
+      return createPaymentRequiredResponse(config, resource, method);
+    }
+
+    // Payment verified - execute handler
+    const response = await handler(request, verification.paymentInfo);
+
+    // Only settle payment if response is successful (2xx)
+    if (response.status >= 200 && response.status < 300 && verification.paymentInfo) {
+      try {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const { settle } = useFacilitator(facilitatorConfig);
+        const selectedRequirements = findMatchingPaymentRequirements(
+          [paymentRequirements],
+          verification.paymentInfo
+        );
+
+        if (selectedRequirements) {
+          const settleResponse: SettleResponse = await settle(
+            verification.paymentInfo,
+            selectedRequirements
+          );
+          
+          if (settleResponse.success) {
+            // Add settlement response to headers (base64 encoded)
+            const settleResponseJson = JSON.stringify(settleResponse);
+            const settleResponseBase64 = Buffer.from(settleResponseJson).toString("base64");
+            response.headers.set("X-Payment-Response", settleResponseBase64);
+          }
+        }
+      } catch (error) {
+        console.error("Payment settlement failed:", error);
+        // Don't fail the request if settlement fails, but log it
+      }
     }
     
-    // Payment verified - execute handler
-    return handler(request, verification.paymentInfo);
+    return response;
   };
 }
 

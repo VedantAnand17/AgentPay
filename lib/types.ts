@@ -11,7 +11,7 @@ export type TradeIntent = {
   userAddress: string;
   agentId: string;
   symbol: string;
-  side: "long" | "short";
+  side: "buy" | "sell";
   size: number;
   leverage: number;
   expectedPaymentAmount: string;
@@ -25,8 +25,8 @@ export type ExecutedTrade = {
   tradeIntentId: string;
   paymentRequestId?: string;
   paymentStatus: "paid" | "failed";
-  perpTxHash: string;
-  entryPrice: number;
+  swapTxHash: string;
+  executionPrice: number;
   timestamp: number;
   status: "executed";
 };
@@ -37,7 +37,7 @@ export type AgentContext = {
 
 export type AgentSuggestion = {
   symbol: string;
-  side: "long" | "short";
+  side: "buy" | "sell";
   size: number;
   leverage: number;
   reason: string;

@@ -19,7 +19,7 @@ function getDb(): Database.Database {
         userAddress TEXT NOT NULL,
         agentId TEXT NOT NULL,
         symbol TEXT NOT NULL,
-        side TEXT NOT NULL CHECK(side IN ('long', 'short')),
+        side TEXT NOT NULL CHECK(side IN ('buy', 'sell')),
         size REAL NOT NULL,
         leverage INTEGER NOT NULL,
         expectedPaymentAmount TEXT NOT NULL,
@@ -33,8 +33,8 @@ function getDb(): Database.Database {
         tradeIntentId TEXT NOT NULL,
         paymentRequestId TEXT,
         paymentStatus TEXT NOT NULL CHECK(paymentStatus IN ('paid', 'failed')),
-        perpTxHash TEXT NOT NULL,
-        entryPrice REAL NOT NULL,
+        swapTxHash TEXT NOT NULL,
+        executionPrice REAL NOT NULL,
         timestamp INTEGER NOT NULL,
         status TEXT NOT NULL DEFAULT 'executed',
         FOREIGN KEY (tradeIntentId) REFERENCES trade_intents(id)
@@ -79,7 +79,7 @@ export const tradeIntents = {
       userAddress: row.userAddress,
       agentId: row.agentId,
       symbol: row.symbol,
-      side: row.side as "long" | "short",
+      side: row.side as "buy" | "sell",
       size: row.size,
       leverage: row.leverage,
       expectedPaymentAmount: row.expectedPaymentAmount,
@@ -108,15 +108,15 @@ export const executedTrades = {
     getDb().prepare(`
       INSERT INTO executed_trades (
         id, tradeIntentId, paymentRequestId, paymentStatus,
-        perpTxHash, entryPrice, timestamp, status
+        swapTxHash, executionPrice, timestamp, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       trade.id,
       trade.tradeIntentId,
       trade.paymentRequestId || null,
       trade.paymentStatus,
-      trade.perpTxHash,
-      trade.entryPrice,
+      trade.swapTxHash,
+      trade.executionPrice,
       trade.timestamp,
       trade.status
     );
@@ -143,8 +143,8 @@ export const executedTrades = {
       tradeIntentId: row.tradeIntentId,
       paymentRequestId: row.paymentRequestId || undefined,
       paymentStatus: row.paymentStatus as "paid" | "failed",
-      perpTxHash: row.perpTxHash,
-      entryPrice: row.entryPrice,
+      swapTxHash: row.swapTxHash,
+      executionPrice: row.executionPrice,
       timestamp: row.timestamp,
       status: row.status as "executed",
       tradeIntent: row.symbol ? {
@@ -152,7 +152,7 @@ export const executedTrades = {
         userAddress: row.userAddress,
         agentId: row.agentId,
         symbol: row.symbol,
-        side: row.side as "long" | "short",
+        side: row.side as "buy" | "sell",
         size: row.size,
         leverage: row.leverage,
         expectedPaymentAmount: "",

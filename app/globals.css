@@ -4,80 +4,92 @@
 
 @layer base {
   :root {
-    /* Base - Light Mode (Clean, airy, off-white) */
+    /* Base - Light Mode (Clean & Professional) */
     --background: 0 0% 100%;
+    /* Pure White */
     --foreground: 222 47% 11%;
+    /* Deep Slate - Professional */
 
-    /* Card - Slight contrast */
+    /* Card */
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary - Deep Indigo/Violets (Stripe-esque) */
-    --primary: 243 75% 59%;
-    /* Rich indigo */
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Emerald Green */
+    --primary: 158 64% 52%;
+    /* #10B981 - Modern Emerald */
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Pale blue-grey */
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 47% 11.2%;
+    /* Secondary - Subtle cool gray */
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    /* Muted - For subtitles/borders */
-    --muted: 210 40% 96.1%;
+    /* Muted */
+    --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    /* Accent - Vibrant teal/cyan for highlights */
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222 47% 11.2%;
+    /* Accent */
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
     /* Destructive */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
 
-    /* UI Elements */
+    /* Borders & Inputs */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 243 75% 59%;
+    --ring: 158 64% 52%;
+
     --radius: 0.75rem;
 
-    /* Custom Gradients */
-    --gradient-hero: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-    --gradient-subtle: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(99, 102, 241, 0.05) 100%);
+    /* Custom Gradients - Professional */
+    --gradient-hero: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    /* Emerald gradient - Modern & Trustworthy */
+    --gradient-subtle: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(16, 185, 129, 0.03) 100%);
   }
 
   .dark {
-    /* Base - Dark Mode (Deep indigo-charcoal, not pure black) */
+    /* Base - Dark Mode (Professional Dark) */
     --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    /* Deep Slate */
+    --foreground: 213 31% 91%;
 
-    --card: 222 47% 14%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    /* Card */
+    --card: 222 47% 13%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 13%;
+    --popover-foreground: 213 31% 91%;
 
-    --primary: 243 75% 65%;
+    /* Primary */
+    --primary: 158 64% 58%;
     /* Slightly lighter for dark mode */
-    --primary-foreground: 222 47% 11.2%;
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 217 33% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    /* Secondary */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 213 31% 91%;
 
-    --muted: 217 33% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    /* Muted */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 217 33% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    /* Accent */
+    --accent: 217 33% 17%;
+    --accent-foreground: 213 31% 91%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    /* Destructive */
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 217 33% 17.5%;
-    --input: 217 33% 17.5%;
-    --ring: 243 75% 65%;
+    /* Borders */
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 158 64% 58%;
 
-    --gradient-hero: linear-gradient(135deg, #4f46e5 0%, #9333ea 50%, #db2777 100%);
-    --gradient-subtle: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(79, 70, 229, 0.1) 100%);
+    --gradient-hero: linear-gradient(135deg, #34D399 0%, #10B981 100%);
+    --gradient-subtle: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.15), transparent 70%);
   }
 }
 
@@ -91,9 +103,9 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/20;
-    /* Improved font rendering */
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    /* Smart ligatures + SS01 for cleaner sans look */
   }
 }
 
@@ -102,25 +114,37 @@
     text-wrap: balance;
   }
 
-  /* Glassmorphism */
+  /* Glassmorphism - Premium */
   .glass {
-    @apply bg-background/70 backdrop-blur-lg border border-white/20 shadow-xl;
+    @apply bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl;
   }
 
   .glass-card {
-    @apply bg-card/50 backdrop-blur-md border border-white/10 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20;
+    @apply bg-card/60 backdrop-blur-sm border border-border/50 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-primary/20;
+  }
+
+  /* Input/Control refinements */
+  .input-premium {
+    @apply h-12 rounded-lg border-border/50 bg-background/50 px-4 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 hover:border-primary/50;
   }
 
   /* Animated Background Grid */
   .bg-grid-small-black {
-    background-size: 40px 40px;
-    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   }
 
   .dark .bg-grid-small-white {
-    background-size: 40px 40px;
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+  }
+
+  /* Text Gradients */
+  .bg-gradient-hero-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-emerald-600;
   }
 }

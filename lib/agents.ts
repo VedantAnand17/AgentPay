@@ -65,12 +65,12 @@ export const trendFollowerAgent: (ctx: AgentContext) => AgentSuggestion = (ctx) 
   const leverage = clamp(Math.floor(Math.abs(trendStrength) * 100) + 2, 2, 5);
   const size = clamp(0.01 + Math.abs(trendStrength) * 0.1, 0.01, 0.05);
   
-  const side: "long" | "short" = isUptrend ? "long" : isDowntrend ? "short" : "long";
+  const side: "buy" | "sell" = isUptrend ? "buy" : isDowntrend ? "sell" : "buy";
   const reason = isUptrend
     ? `Strong uptrend detected (${(trendStrength * 100).toFixed(2)}% momentum). Following the trend.`
     : isDowntrend
     ? `Strong downtrend detected (${(trendStrength * 100).toFixed(2)}% momentum). Following the trend.`
-    : `Neutral trend, defaulting to long position.`;
+    : `Neutral trend, defaulting to buy position.`;
   
   return {
     symbol: ctx.symbol,
@@ -103,25 +103,25 @@ export const breakoutSniperAgent: (ctx: AgentContext) => AgentSuggestion = (ctx)
   const isNearLow = (high - currentPrice) / range > 0.7;
   
   // Breakout potential: if consolidating and near edge, expect breakout
-  let side: "long" | "short" = "long";
+  let side: "buy" | "sell" = "buy";
   let reason = "";
   
   if (isConsolidating) {
     if (isNearHigh) {
-      side = "long";
+      side = "buy";
       reason = `Consolidation pattern detected near upper bound. Expecting bullish breakout.`;
     } else if (isNearLow) {
-      side = "short";
+      side = "sell";
       reason = `Consolidation pattern detected near lower bound. Expecting bearish breakdown.`;
     } else {
-      side = "long";
-      reason = `Consolidation detected, defaulting to long breakout expectation.`;
+      side = "buy";
+      reason = `Consolidation detected, defaulting to buy breakout expectation.`;
     }
   } else {
     // Already breaking out
     const momentum = (currentPrice - avgPrice) / avgPrice;
-    side = momentum > 0 ? "long" : "short";
-    reason = `Breakout in progress. ${side === "long" ? "Bullish" : "Bearish"} momentum detected.`;
+    side = momentum > 0 ? "buy" : "sell";
+    reason = `Breakout in progress. ${side === "buy" ? "Bullish" : "Bearish"} momentum detected.`;
   }
   
   // Breakout trades use moderate leverage
@@ -155,18 +155,18 @@ export const meanReversionAgent: (ctx: AgentContext) => AgentSuggestion = (ctx) 
   const isOverbought = deviation > 0.03; // 3% above mean
   const isOversold = deviation < -0.03; // 3% below mean
   
-  let side: "long" | "short" = "long";
+  let side: "buy" | "sell" = "buy";
   let reason = "";
   
   if (isOverbought) {
-    side = "short";
+    side = "sell";
     reason = `Price ${(deviation * 100).toFixed(2)}% above mean. Expecting reversion to average.`;
   } else if (isOversold) {
-    side = "long";
+    side = "buy";
     reason = `Price ${(Math.abs(deviation) * 100).toFixed(2)}% below mean. Expecting reversion to average.`;
   } else {
-    side = "long";
-    reason = `Price near mean. Defaulting to long position.`;
+    side = "buy";
+    reason = `Price near mean. Defaulting to buy position.`;
   }
   
   // Mean reversion uses conservative leverage

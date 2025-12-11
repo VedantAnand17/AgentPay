@@ -1,10 +1,10 @@
 # AgentPay Relay
 
-Execute AI-powered perp trades with one-time x402 payments. No API keys. No custody.
+Execute AI-powered spot trades on Uniswap with one-time x402 payments. No API keys. No custody.
 
 ## Overview
 
-AgentPay Relay is a full-stack Web3 application that enables users to execute leveraged perpetual trades on Base Sepolia using a one-time x402 payment instead of providing API keys or custody.
+AgentPay Relay is a full-stack Web3 application that enables users to execute spot trades on Uniswap V3 (Base Sepolia) using a one-time x402 payment instead of providing API keys or custody.
 
 ### Flow
 
@@ -13,8 +13,8 @@ AgentPay Relay is a full-stack Web3 application that enables users to execute le
 3. User clicks "Execute Trade" - frontend uses x402 client library
 4. x402 client automatically handles payment via wallet (shows payment confirmation UI)
 5. Backend uses x402 middleware to verify payment before executing
-6. Backend opens a perp position on Base Sepolia using an execution wallet
-7. Backend returns the perp tx hash + execution info
+6. Backend executes a spot swap on Uniswap V3 using an execution wallet
+7. Backend returns the swap tx hash + execution info
 8. UI shows a full execution receipt
 
 ## Tech Stack
@@ -34,14 +34,16 @@ Create a `.env.local` file in the root directory with the following variables:
 ```env
 # Base Sepolia Network
 BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
-PERP_CONTRACT_ADDRESS=0x...  # Your perp contract address on Base Sepolia
-EXECUTION_PRIVATE_KEY=0x...  # Private key of execution wallet (must have funds for gas)
+UNISWAP_V3_ROUTER_ADDRESS=0x2626664c2603336E57B271c5C0b26F421741e481  # Uniswap V3 SwapRouter02 on Base Sepolia
+BASE_SEPOLIA_USDC_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e  # USDC on Base Sepolia (optional, defaults to this)
+BASE_SEPOLIA_BTC_ADDRESS=0x13dcec0762ecc5e666c207ab44dc768e5e33070f  # WBTC on Base Sepolia (optional, defaults to this)
+EXECUTION_PRIVATE_KEY=0x...  # Private key of execution wallet (must have funds for gas and tokens)
 
 # x402 Integration (no API keys needed - wallet-based)
 # You can use either X402_PAYMENT_ADDRESS or ADDRESS (x402-Learn pattern)
 X402_PAYMENT_ADDRESS=0x...  # Address to receive payments (or use ADDRESS)
 ADDRESS=0x...  # Alternative: wallet address to receive payments
-X402_ASSET_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913  # USDC on Base
+X402_ASSET_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e  # USDC on Base Sepolia (defaults to testnet, use 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 for mainnet)
 X402_NETWORK=base-sepolia  # Network for payments (base-sepolia or base)
 X402_ENV=testnet  # Set to "mainnet" to use Coinbase facilitator on mainnet
 FACILITATOR_URL=https://x402.org/facilitator  # Optional: custom facilitator URL
@@ -99,7 +101,7 @@ AgentPay/
 ├── lib/
 │   ├── agents.ts                 # Trading agent strategies
 │   ├── db.ts                     # SQLite database operations
-│   ├── perp.ts                   # Base Sepolia perp contract interaction
+│   ├── uniswap.ts                # Uniswap V3 spot exchange interaction
 │   ├── types.ts                  # TypeScript type definitions
 │   ├── x402.ts                   # x402 payment configuration
 │   └── x402-middleware.ts        # x402 middleware for Next.js API routes
@@ -119,10 +121,10 @@ Implements three rule-based trading strategies:
 - **Mean Reversion**: Trades against extremes, betting on price returning to average
 
 Each agent returns a deterministic suggestion with:
-- `symbol`: Trading pair (BTC, ETH, SOL)
-- `side`: "long" or "short"
-- `size`: Between 0.01–0.05
-- `leverage`: Between 2–5
+- `symbol`: Token symbol to trade (e.g., WETH, BTC, ETH, SOL)
+- `side`: "buy" or "sell"
+- `size`: Between 0.01–0.05 (amount in USDC for buy, or token amount for sell)
+- `leverage`: Between 2–5 (kept for compatibility, not used in spot trades)
 - `reason`: Explanation of the suggestion
 
 ### x402 Integration (`lib/x402.ts` and `lib/x402-middleware.ts`)
@@ -147,22 +149,34 @@ x402 integration uses wallet-based payments (no API keys required), based on the
 - Payment configuration matches x402-Learn pattern with price, network, and metadata
 - x402 shows wallet confirmation UI automatically when payment is required
 
-### Perp Contract (`lib/perp.ts`)
+### Uniswap V3 Spot Exchange (`lib/uniswap.ts`)
 
-Interacts with a simplified perp contract on Base Sepolia:
+Interacts with Uniswap V3 SwapRouter02 on Base Sepolia:
 
-- `openPerpPositionOnBaseSepolia()`: Opens a leveraged position using the execution wallet
+- `executeUniswapSwap()`: Executes a spot token swap using the execution wallet
+  - For "buy": Swaps USDC → Token
+  - For "sell": Swaps Token → USDC
+- Automatically handles token approvals before swapping
+- Uses Uniswap V3 `exactInputSingle` function with 0.05% fee tier
 
-**Note**: The contract ABI is simplified for MVP. Replace `PERP_ABI` with the actual contract ABI when deploying:
-- Contract should expose `openPosition(address user, string symbol, bool isLong, uint256 size, uint256 leverage)`
-- Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas
+**Note**: 
+- Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas and the tokens being swapped
+- Token addresses are configured in `TOKEN_ADDRESSES` mapping (currently supports USDC, WETH, and BTC/WBTC)
+- BTC trades use WBTC (Wrapped Bitcoin) token address on Base Sepolia
+- **Important**: For swaps to work, the Uniswap V3 pool must exist for the token pair (e.g., USDC/BTC pool)
+- If a swap appears successful but tokens aren't received, check:
+  1. The transaction on BaseScan to verify it actually executed
+  2. That the Uniswap pool exists for the token pair
+  3. Your wallet address matches the `userAddress` in the trade intent
+- Use `/api/balances?address=0x...&symbol=BTC` to check token balances
+- In production, implement proper slippage protection and price oracle integration
 
 ### Database (`lib/db.ts`)
 
 SQLite database with two main tables:
 
 - `trade_intents`: Stores pending/paid/executed trade intents
-- `executed_trades`: Stores completed trades with tx hashes and entry prices
+- `executed_trades`: Stores completed trades with swap tx hashes and execution prices
 
 ## API Routes
 
@@ -178,7 +192,7 @@ Returns agent suggestion with side, size, leverage, and reason.
 
 ### POST `/api/trades/create-intent`
 
-Body: `{ userAddress, agentId, symbol, side, size, leverage }`
+Body: `{ userAddress, agentId, symbol, side, size, leverage }` (side: "buy" or "sell")
 
 Creates a trade intent and x402 payment request. Returns:
 - `tradeIntent`: Created intent with payment request ID
@@ -188,11 +202,31 @@ Creates a trade intent and x402 payment request. Returns:
 
 Body: `{ tradeIntentId }`
 
-Verifies payment, opens perp position, and creates executed trade record. Returns:
-- `executedTrade`: Trade execution details with tx hash
+Verifies payment, executes Uniswap spot swap, and creates executed trade record. Returns:
+- `executedTrade`: Trade execution details with swap tx hash and execution price
 - `tradeIntent`: Updated intent
 
 ### GET `/api/trades`
+
+Returns list of executed trades with trade intent details.
+
+### GET `/api/balances?address=0x...&symbol=BTC`
+
+Returns token balance for a given address and symbol. Useful for verifying holdings after a trade.
+
+**Query Parameters**:
+- `address`: User wallet address (required)
+- `symbol`: Token symbol (e.g., "BTC", "WETH", "USDC") (required)
+
+**Response**:
+```json
+{
+  "address": "0x...",
+  "symbol": "BTC",
+  "balance": "100000000",
+  "formatted": "1.0"
+}
+```
 
 Returns list of recent executed trades (limit: 50 by default).
 
@@ -210,7 +244,7 @@ Main trading interface with:
   - Wallet address input
   - Agent selection
   - Symbol selection (BTC, ETH, SOL)
-  - Side toggle (Long/Short)
+  - Side toggle (Buy/Sell)
   - Size and leverage inputs
   - "Get Agent Suggestion" button
   - "Create Payment Request" button
@@ -238,12 +272,13 @@ Main trading interface with:
 4. **Verify & Execute**: Backend receives request
    - x402 middleware verifies payment from request headers
    - If payment verified, handler executes:
-     - Calls `openPerpPositionOnBaseSepolia()` to execute trade
-     - Creates `ExecutedTrade` record with tx hash and entry price
+     - Calls `executeUniswapSwap()` to execute spot swap on Uniswap V3
+     - Handles token approvals automatically
+     - Creates `ExecutedTrade` record with swap tx hash and execution price
    - If payment not verified, returns 402 Payment Required
 
 5. **Display Result**: Frontend receives execution result
-   - Shows execution receipt with tx hash, entry price, etc.
+   - Shows execution receipt with swap tx hash, execution price, etc.
    - Refreshes recent trades list
 
 ## Development Notes
@@ -260,9 +295,12 @@ Main trading interface with:
   - In production, integrate with wagmi, web3modal, or your preferred wallet connector
   - x402 works with any wallet that supports standard signing methods
 
-- **Perp Contract**: 
-  - The contract ABI is simplified. Replace with actual contract ABI in `lib/perp.ts`
-  - Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas
+- **Uniswap V3 Integration**: 
+  - Uses Uniswap V3 SwapRouter02 for spot token swaps
+  - Token addresses are configured in `lib/uniswap.ts` - add more tokens as needed
+  - Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas and the tokens being swapped
+  - In production, implement proper slippage protection (currently set to 0 for MVP)
+  - Consider integrating price oracles for accurate execution price reporting
 
 - **Database**: 
   - Database file (`agentpay.db`) is created automatically on first run

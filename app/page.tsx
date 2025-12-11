@@ -23,37 +23,37 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard
-              icon={Bot}
+              icon={<Bot className="h-6 w-6" />}
               title="Agent-First Design"
               description="Optimized for AI agents to trigger trades programmatically without managing complex wallet states."
               delay={0.1}
             />
             <FeatureCard
-              icon={ShieldCheck}
+              icon={<ShieldCheck className="h-6 w-6" />}
               title="Secure Relay"
               description="Transactions are relayed securely. User funds remain non-custodial throughout the entire process."
               delay={0.2}
             />
             <FeatureCard
-              icon={LineChart}
+              icon={<LineChart className="h-6 w-6" />}
               title="Uniswap Integration"
               description="Direct execution on Uniswap pools ensuring deep liquidity and best price execution."
               delay={0.3}
             />
             <FeatureCard
-              icon={Wallet}
+              icon={<Wallet className="h-6 w-6" />}
               title="No API Keys"
               description="Eliminate security risks associated with long-lived API keys. Use x402 payments for authorization."
               delay={0.4}
             />
             <FeatureCard
-              icon={Cpu}
+              icon={<Cpu className="h-6 w-6" />}
               title="Instant Settlement"
               description="Trades are settled on-chain immediately. No waiting for withdrawals or centralized batching."
               delay={0.5}
             />
             <FeatureCard
-              icon={Globe}
+              icon={<Globe className="h-6 w-6" />}
               title="Permissionless"
               description="Anyone can use the relay. No sign-ups, no KYC. Just connect and trade via the protocol."
               delay={0.6}

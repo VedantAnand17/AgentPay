@@ -16,6 +16,6 @@ export const wagmiConfig = createConfig({
   transports: {
     [baseSepolia.id]: http(),
   },
-  ssr: true, // Enable SSR for Next.js
+  ssr: false, // Disable SSR to avoid indexedDB errors - Providers are loaded client-side only
 });
 

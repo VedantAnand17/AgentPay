@@ -1,7 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import dynamic from "next/dynamic";
 import { Navbar } from "@/components/ui/navbar";
+
+const fontHeading = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-heading",
+});
+
+const fontBody = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-body",
+});
 
 // Dynamically import Providers with no SSR to avoid indexedDB errors
 const Providers = dynamic(() => import("./providers").then((mod) => mod.Providers), {
@@ -20,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-background font-sans">
+      <body className={`${fontBody.variable} ${fontHeading.variable} antialiased min-h-screen bg-background font-sans`}>
         <Providers>
           <Navbar />
           <main className="flex-1">

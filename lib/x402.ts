@@ -5,10 +5,19 @@ import { facilitator } from "@coinbase/x402";
 
 // x402 configuration from environment variables
 const X402_PAYMENT_ADDRESS = (process.env.X402_PAYMENT_ADDRESS || process.env.ADDRESS) as `0x${string}`;
-const X402_ASSET_ADDRESS = process.env.X402_ASSET_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base
 const X402_NETWORK = process.env.X402_NETWORK || "base-sepolia";
 const useMainnetFacilitator = process.env.X402_ENV === "mainnet";
 const facilitatorUrl = process.env.FACILITATOR_URL || "https://x402.org/facilitator";
+
+// USDC addresses: Base Sepolia testnet vs Base mainnet
+const BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const BASE_MAINNET_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+
+// Use appropriate USDC address based on network, or allow override via env var
+const X402_ASSET_ADDRESS = process.env.X402_ASSET_ADDRESS || 
+  (useMainnetFacilitator || X402_NETWORK === "base" 
+    ? BASE_MAINNET_USDC 
+    : BASE_SEPOLIA_USDC);
 
 // Validate required environment variables
 if (!X402_PAYMENT_ADDRESS || X402_PAYMENT_ADDRESS === "0x0000000000000000000000000000000000000000") {
