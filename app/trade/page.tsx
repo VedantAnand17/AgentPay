@@ -22,8 +22,9 @@ import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PaymentCheckout } from "@/components/ui/payment-checkout";
 import { motion, AnimatePresence } from "framer-motion";
-import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, TrendingUp } from "lucide-react";
+import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, TrendingUp, Loader2, Zap } from "lucide-react";
 
 export default function TradePage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -209,7 +210,6 @@ export default function TradePage() {
       }
     }
 
-    setLoading(true);
     setError("");
     try {
       // Make initial request to check for payment requirement
@@ -233,7 +233,6 @@ export default function TradePage() {
           },
         });
         setShowPaymentModal(true);
-        setLoading(false);
         return;
       }
 
@@ -252,8 +251,6 @@ export default function TradePage() {
     } catch (err: any) {
       console.error("Trade execution error:", err);
       setError(err.message || "Failed to execute trade");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -266,7 +263,6 @@ export default function TradePage() {
     }
 
     setLoading(true);
-    setShowPaymentModal(false);
     try {
       // Check if wallet is on the correct chain (Base Sepolia)
       if (chainId !== baseSepolia.id) {
@@ -325,9 +321,10 @@ export default function TradePage() {
 
       setPendingRequest(null);
       setPaymentRequirements(null);
+      setShowPaymentModal(false);
     } catch (err: any) {
       console.error("Payment error:", err);
-      setError(err.message || "Payment failed");
+      throw err; // Re-throw to let PaymentCheckout handle it
     } finally {
       setLoading(false);
     }
@@ -404,39 +401,58 @@ export default function TradePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-background pt-24 pb-12">
-      <div className="bg-grid-small-black dark:bg-grid-small-white fixed inset-0 z-0 pointer-events-none opacity-40" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-background dark:via-slate-950 dark:to-background pt-24 pb-12">
+      <div className="bg-grid-small-black dark:bg-grid-small-white fixed inset-0 z-0 pointer-events-none opacity-30" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-transparent to-emerald-500/5" />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4"
+        >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Trade Console</h1>
-            <p className="text-muted-foreground mt-1">Execute automated trades with AI agents.</p>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-2">
+              Trade Console
+            </h1>
+            <p className="text-muted-foreground text-lg">Execute automated trades with AI agents.</p>
           </div>
           <div className="flex gap-3">
             {isConnected ? (
               <>
-                <div className="bg-white dark:bg-card px-4 py-2 rounded-full border shadow-sm flex items-center gap-2 text-sm font-medium">
-                  <div className={`w-2 h-2 rounded-full ${chainId === baseSepolia.id ? 'bg-green-500' : 'bg-red-500'}`} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white dark:bg-card px-4 py-2 rounded-full border shadow-sm flex items-center gap-2 text-sm font-medium backdrop-blur-sm"
+                >
+                  <motion.div
+                    animate={{
+                      scale: chainId === baseSepolia.id ? [1, 1.2, 1] : 1,
+                    }}
+                    transition={{ duration: 0.5, repeat: chainId !== baseSepolia.id ? Infinity : 0, repeatDelay: 2 }}
+                    className={`w-2 h-2 rounded-full ${chainId === baseSepolia.id ? 'bg-green-500' : 'bg-red-500'}`}
+                  />
                   {chainId === baseSepolia.id ? 'Base Sepolia' : 'Wrong Network'}
-                </div>
-                <Button onClick={() => open()} variant="outline" className="rounded-full border-2">
+                </motion.div>
+                <Button onClick={() => open()} variant="outline" className="rounded-full border-2 shadow-sm">
                   <Wallet className="w-4 h-4 mr-2" />
                   {formatAddress(address || "")}
                 </Button>
-                <Button onClick={() => disconnect()} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                <Button onClick={() => disconnect()} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive rounded-full">
                   <ArrowRightLeft className="w-4 h-4" />
                 </Button>
               </>
             ) : (
-              <Button onClick={() => open()} size="lg" className="rounded-full shadow-lg shadow-primary/20">
+              <Button onClick={() => open()} size="lg" className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                <Wallet className="w-4 h-4 mr-2" />
                 Connect Wallet
               </Button>
             )}
           </div>
-        </div>
+        </motion.div>
 
         <AnimatePresence>
           {!isConnected && (
@@ -476,13 +492,15 @@ export default function TradePage() {
 
           {/* Left Column: Trade Form */}
           <div className="lg:col-span-7 space-y-6">
-            <Card className="glass-card overflow-hidden border-0 shadow-lg ring-1 ring-black/5">
-              <CardHeader className="bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border-b pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
+            <Card className="glass-card overflow-hidden border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/5 hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 border-b pb-4">
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                  </div>
                   Trade Configuration
                 </CardTitle>
-                <CardDescription>Configure your AI-driven trade parameters.</CardDescription>
+                <CardDescription className="text-base mt-2">Configure your AI-driven trade parameters.</CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
 
@@ -607,7 +625,7 @@ export default function TradePage() {
             </Card>
 
             {/* Execution Card */}
-            <Card className="glass-card border-0 shadow-lg ring-1 ring-black/5">
+            <Card className="glass-card border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/5 hover:shadow-2xl transition-all duration-300">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -631,18 +649,35 @@ export default function TradePage() {
                     <Button
                       onClick={handleCreatePaymentRequest}
                       disabled={loading || !isConnected || !selectedAgent}
-                      className="w-full h-14 text-lg font-semibold shadow-lg shadow-primary/25 rounded-xl"
+                      className="w-full h-14 text-lg font-semibold shadow-lg shadow-primary/25 rounded-xl hover:shadow-primary/40 transition-all"
                       variant="default"
                     >
-                      Create Order Intent
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Creating Intent...
+                        </>
+                      ) : (
+                        "Create Order Intent"
+                      )}
                     </Button>
                   ) : !executedTrade ? (
                     <Button
                       onClick={handleExecuteTrade}
                       disabled={loading || !tradeIntent || !isConnected}
-                      className="w-full h-14 text-lg font-semibold shadow-lg shadow-primary/25 rounded-xl bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90"
+                      className="w-full h-14 text-lg font-semibold shadow-lg shadow-primary/25 rounded-xl bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 hover:shadow-primary/40 transition-all"
                     >
-                      Pay & Execute Trade
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5 mr-2" />
+                          Pay & Execute Trade
+                        </>
+                      )}
                     </Button>
                   ) : (
                     <Button
@@ -651,7 +686,7 @@ export default function TradePage() {
                         setTradeIntent(null);
                       }}
                       variant="outline"
-                      className="w-full h-14"
+                      className="w-full h-14 text-lg rounded-xl"
                     >
                       Start New Trade
                     </Button>
@@ -659,31 +694,49 @@ export default function TradePage() {
 
                   {executedTrade && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 mt-4"
+                      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                      className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-500/30 rounded-xl p-6 mt-4"
                     >
-                      <div className="flex items-center gap-3 mb-4">
-                        <CheckCircle2 className="w-6 h-6 text-green-500" />
-                        <h3 className="font-bold text-green-700 dark:text-green-400">Trade Executed Successfully</h3>
-                      </div>
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                        className="flex items-center gap-3 mb-4"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                          <CheckCircle2 className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="font-bold text-lg text-green-700 dark:text-green-400">Trade Executed Successfully</h3>
+                      </motion.div>
 
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="bg-background/50 p-3 rounded-lg">
-                          <p className="text-xs text-muted-foreground mb-1">Execution Price</p>
-                          <p className="font-mono font-medium">${executedTrade.executionPrice.toFixed(2)}</p>
-                        </div>
-                        <div className="bg-background/50 p-3 rounded-lg">
-                          <p className="text-xs text-muted-foreground mb-1">Transaction</p>
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3 }}
+                          className="bg-white/60 dark:bg-background/60 p-4 rounded-lg border border-green-200/50 dark:border-green-800/50"
+                        >
+                          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Execution Price</p>
+                          <p className="font-mono font-bold text-lg">${executedTrade.executionPrice.toFixed(2)}</p>
+                        </motion.div>
+                        <motion.div
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4 }}
+                          className="bg-white/60 dark:bg-background/60 p-4 rounded-lg border border-green-200/50 dark:border-green-800/50"
+                        >
+                          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Transaction</p>
                           <a
                             href={`https://sepolia.basescan.org/tx/${executedTrade.swapTxHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-mono font-medium text-primary hover:underline truncate block"
+                            className="font-mono font-medium text-primary hover:underline truncate block text-sm"
                           >
                             {formatAddress(executedTrade.swapTxHash)}
                           </a>
-                        </div>
+                        </motion.div>
                       </div>
                     </motion.div>
                   )}
@@ -694,9 +747,14 @@ export default function TradePage() {
 
           {/* Right Column: Recent Executions */}
           <div className="lg:col-span-5">
-            <Card className="h-full glass-card border-0 shadow-lg ring-1 ring-black/5 flex flex-col">
-              <CardHeader className="border-b pb-4">
-                <CardTitle>Recent Activity</CardTitle>
+            <Card className="h-full glass-card border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/5 flex flex-col hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="border-b pb-4 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                  </div>
+                  Recent Activity
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-0 flex-1 overflow-auto max-h-[600px]">
                 {recentTrades.length === 0 ? (
@@ -764,60 +822,21 @@ export default function TradePage() {
         </div>
       </div>
 
-      {/* Payment Modal */}
-      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        {paymentRequirements && (
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-center text-2xl font-bold">Confirm Payment</DialogTitle>
-              <DialogDescription className="text-center">
-                A payment is required to execute this trade on-chain.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-6 my-4 space-y-4">
-              <div className="flex justify-between items-end border-b pb-4">
-                <span className="text-sm text-muted-foreground">Total Amount</span>
-                <span className="text-2xl font-bold text-foreground">
-                  {paymentRequirements.accepts[0].price ||
-                    `$${(Number(paymentRequirements.accepts[0].maxAmountRequired || 0) / 1_000_000).toFixed(6)}`}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Network</span>
-                  <span className="font-medium">{paymentRequirements.accepts[0].network || "base-sepolia"}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Asset</span>
-                  <span className="font-medium">USDC</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setPendingRequest(null);
-                  setPaymentRequirements(null);
-                }}
-                variant="outline"
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirmPayment}
-                disabled={loading}
-                className="flex-1 bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 text-white shadow-lg"
-              >
-                {loading ? "Processing..." : "Pay & Execute"}
-              </Button>
-            </div>
-          </DialogContent>
-        )}
-      </Dialog>
+      {/* Stripe-like Payment Checkout */}
+      <PaymentCheckout
+        open={showPaymentModal}
+        onOpenChange={setShowPaymentModal}
+        paymentRequirements={paymentRequirements}
+        onConfirm={handleConfirmPayment}
+        loading={loading}
+        executedTrade={executedTrade}
+        tradeDetails={tradeIntent ? {
+          symbol: tradeIntent.symbol,
+          side: tradeIntent.side,
+          size: tradeIntent.size,
+          leverage: tradeIntent.leverage,
+        } : undefined}
+      />
     </div>
   );
 }
