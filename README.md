@@ -4,7 +4,7 @@ Execute AI-powered spot trades on Uniswap with one-time x402 payments. No API ke
 
 ## Overview
 
-AgentPay Relay is a full-stack Web3 application that enables users to execute spot trades on Uniswap V3 (Base Sepolia) using a one-time x402 payment instead of providing API keys or custody.
+AgentPay Relay is a full-stack Web3 application that enables users to execute spot trades on Uniswap V4 (Base Sepolia) using a one-time x402 payment instead of providing API keys or custody.
 
 ### Flow
 
@@ -13,7 +13,7 @@ AgentPay Relay is a full-stack Web3 application that enables users to execute sp
 3. User clicks "Execute Trade" - frontend uses x402 client library
 4. x402 client automatically handles payment via wallet (shows payment confirmation UI)
 5. Backend uses x402 middleware to verify payment before executing
-6. Backend executes a spot swap on Uniswap V3 using an execution wallet
+6. Backend executes a spot swap on Uniswap V4 using an execution wallet
 7. Backend returns the swap tx hash + execution info
 8. UI shows a full execution receipt
 
@@ -34,16 +34,17 @@ Create a `.env.local` file in the root directory with the following variables:
 ```env
 # Base Sepolia Network
 BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
-UNISWAP_V3_ROUTER_ADDRESS=0x2626664c2603336E57B271c5C0b26F421741e481  # Uniswap V3 SwapRouter02 on Base Sepolia
-BASE_SEPOLIA_USDC_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e  # USDC on Base Sepolia (optional, defaults to this)
-BASE_SEPOLIA_BTC_ADDRESS=0x13dcec0762ecc5e666c207ab44dc768e5e33070f  # WBTC on Base Sepolia (optional, defaults to this)
+UNISWAP_V4_POOL_MANAGER_ADDRESS=0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408  # Uniswap V4 PoolManager on Base Sepolia
+UNISWAP_V4_POSITION_MANAGER_ADDRESS=0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80  # Uniswap V4 PositionManager on Base Sepolia
+BASE_SEPOLIA_USDC_ADDRESS=0xB6c34A382a45F93682B03dCa9C48e3710e76809F  # USDC on Base Sepolia (optional, defaults to pool currency0)
+BASE_SEPOLIA_BTC_ADDRESS=0xb9B962177c15353cd6AA49E26c2b627b9CC35457  # cbBTC on Base Sepolia (optional, defaults to pool currency1)
 EXECUTION_PRIVATE_KEY=0x...  # Private key of execution wallet (must have funds for gas and tokens)
 
 # x402 Integration (no API keys needed - wallet-based)
 # You can use either X402_PAYMENT_ADDRESS or ADDRESS (x402-Learn pattern)
 X402_PAYMENT_ADDRESS=0x...  # Address to receive payments (or use ADDRESS)
 ADDRESS=0x...  # Alternative: wallet address to receive payments
-X402_ASSET_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e  # USDC on Base Sepolia (defaults to testnet, use 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 for mainnet)
+X402_ASSET_ADDRESS=0xB6c34A382a45F93682B03dCa9C48e3710e76809F  # USDC on Base Sepolia (defaults to pool's MockUSDC, use 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 for mainnet)
 X402_NETWORK=base-sepolia  # Network for payments (base-sepolia or base)
 X402_ENV=testnet  # Set to "mainnet" to use Coinbase facilitator on mainnet
 FACILITATOR_URL=https://x402.org/facilitator  # Optional: custom facilitator URL
@@ -69,13 +70,71 @@ bun install
 
 2. Set up environment variables (see above)
 
-3. Run the development server:
+3. (Optional) Deploy your own Uniswap V3 pool - see [Deploying Contracts](#deploying-contracts) below
+
+4. Run the development server:
 
 ```bash
 bun run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Deploying Contracts
+
+The project includes Foundry contracts for deploying your own Uniswap V3 pool on Base Sepolia.
+
+### Prerequisites
+
+- [Foundry](https://book.getfoundry.sh/getting-started/installation)
+- Base Sepolia ETH (get from [Base Sepolia Faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet))
+
+### Quick Deployment
+
+```bash
+# Navigate to contracts folder
+cd contracts
+
+# Install Foundry dependencies
+forge install OpenZeppelin/openzeppelin-contracts@v4.9.3
+forge install foundry-rs/forge-std
+
+# Create .env file
+cp .env.example .env
+# Edit .env with your private key
+
+# Run automated deployment (deploys tokens + creates pool)
+./script/Deploy.sh
+```
+
+### Manual Deployment
+
+1. **Deploy Mock Tokens**:
+```bash
+forge script script/DeployTokens.s.sol:DeployTokens \
+  --rpc-url $BASE_SEPOLIA_RPC_URL \
+  --broadcast -vvvv
+```
+
+2. **Update `.env`** with deployed token addresses
+
+3. **Deploy Uniswap V3 Pool**:
+```bash
+forge script script/DeployPool.s.sol:DeployPool \
+  --rpc-url $BASE_SEPOLIA_RPC_URL \
+  --broadcast -vvvv
+```
+
+### Uniswap V3 Addresses (Base Sepolia)
+
+| Contract | Address |
+|----------|---------|
+| UniswapV3Factory | `0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24` |
+| SwapRouter02 | `0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4` |
+| NonfungiblePositionManager | `0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2` |
+| QuoterV2 | `0xC5290058841028F1614F3A6F0F5816cAd0df5E27` |
+
+After deployment, update your project's root `.env` file with the deployed addresses.
 
 ## Project Structure
 
@@ -98,10 +157,22 @@ AgentPay/
 │   ├── layout.tsx                # Root layout
 │   ├── page.tsx                  # Landing page
 │   └── globals.css               # Global styles
+├── contracts/                     # Foundry smart contracts
+│   ├── src/
+│   │   ├── MockERC20.sol         # Mock ERC20 tokens
+│   │   └── interfaces/           # Uniswap V3 interfaces
+│   ├── script/
+│   │   ├── DeployTokens.s.sol    # Deploy mock USDC/WBTC
+│   │   ├── DeployPool.s.sol      # Create Uniswap V3 pool
+│   │   ├── AddLiquidity.s.sol    # Add liquidity to pool
+│   │   └── Deploy.sh             # Automated deployment script
+│   ├── test/                     # Contract tests
+│   └── foundry.toml              # Foundry configuration
 ├── lib/
 │   ├── agents.ts                 # Trading agent strategies
 │   ├── db.ts                     # SQLite database operations
-│   ├── uniswap.ts                # Uniswap V3 spot exchange interaction
+│   ├── uniswap.ts                # Uniswap V4 spot exchange interaction
+│   ├── uniswap-v3.ts             # Uniswap V3 spot exchange interaction
 │   ├── types.ts                  # TypeScript type definitions
 │   ├── x402.ts                   # x402 payment configuration
 │   └── x402-middleware.ts        # x402 middleware for Next.js API routes
@@ -149,24 +220,33 @@ x402 integration uses wallet-based payments (no API keys required), based on the
 - Payment configuration matches x402-Learn pattern with price, network, and metadata
 - x402 shows wallet confirmation UI automatically when payment is required
 
-### Uniswap V3 Spot Exchange (`lib/uniswap.ts`)
+### Uniswap V4 Spot Exchange (`lib/uniswap.ts`)
 
-Interacts with Uniswap V3 SwapRouter02 on Base Sepolia:
+Interacts with Uniswap V4 PoolManager on Base Sepolia:
 
 - `executeUniswapSwap()`: Executes a spot token swap using the execution wallet
-  - For "buy": Swaps USDC → Token
-  - For "sell": Swaps Token → USDC
+  - For "buy": Swaps USDC → cbBTC
+  - For "sell": Swaps cbBTC → USDC
 - Automatically handles token approvals before swapping
-- Uses Uniswap V3 `exactInputSingle` function with 0.05% fee tier
+- Uses Uniswap V4 `swap` function on PoolManager with 0.3% fee tier and tick spacing 60
+- **Deployed Pool Configuration (Base Sepolia)**:
+  - PoolManager: `0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408`
+  - PositionManager: `0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80`
+  - Currency0: USDC (`0xB6c34A382a45F93682B03dCa9C48e3710e76809F`) - MockUSDC
+  - Currency1: cbBTC (`0xb9B962177c15353cd6AA49E26c2b627b9CC35457`) - MockCbBTC
+  - Fee: 3000 (0.3%)
+  - Tick Spacing: 60
+  - Initial Pool State: Initial Tick: 0, SqrtPriceX96: 79228162514264337593543950336
+  - Liquidity Position: Tick Lower: -887220, Tick Upper: 887220, Liquidity: 2500000000
 
 **Note**: 
 - Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas and the tokens being swapped
-- Token addresses are configured in `TOKEN_ADDRESSES` mapping (currently supports USDC, WETH, and BTC/WBTC)
-- BTC trades use WBTC (Wrapped Bitcoin) token address on Base Sepolia
-- **Important**: For swaps to work, the Uniswap V3 pool must exist for the token pair (e.g., USDC/BTC pool)
+- Token addresses are configured in `TOKEN_ADDRESSES` mapping (currently supports USDC and cbBTC)
+- BTC trades use cbBTC (Coinbase Wrapped Bitcoin) token address on Base Sepolia
+- **Important**: Only swaps between USDC and cbBTC are supported (the configured pool)
 - If a swap appears successful but tokens aren't received, check:
   1. The transaction on BaseScan to verify it actually executed
-  2. That the Uniswap pool exists for the token pair
+  2. That the Uniswap V4 pool has liquidity
   3. Your wallet address matches the `userAddress` in the trade intent
 - Use `/api/balances?address=0x...&symbol=BTC` to check token balances
 - In production, implement proper slippage protection and price oracle integration
@@ -272,7 +352,7 @@ Main trading interface with:
 4. **Verify & Execute**: Backend receives request
    - x402 middleware verifies payment from request headers
    - If payment verified, handler executes:
-     - Calls `executeUniswapSwap()` to execute spot swap on Uniswap V3
+     - Calls `executeUniswapSwap()` to execute spot swap on Uniswap V4
      - Handles token approvals automatically
      - Creates `ExecutedTrade` record with swap tx hash and execution price
    - If payment not verified, returns 402 Payment Required
@@ -295,9 +375,9 @@ Main trading interface with:
   - In production, integrate with wagmi, web3modal, or your preferred wallet connector
   - x402 works with any wallet that supports standard signing methods
 
-- **Uniswap V3 Integration**: 
-  - Uses Uniswap V3 SwapRouter02 for spot token swaps
-  - Token addresses are configured in `lib/uniswap.ts` - add more tokens as needed
+- **Uniswap V4 Integration**:
+  - Uses Uniswap V4 PoolManager for spot token swaps
+  - Token addresses are configured in `lib/uniswap.ts` - currently supports USDC/cbBTC pool
   - Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas and the tokens being swapped
   - In production, implement proper slippage protection (currently set to 0 for MVP)
   - Consider integrating price oracles for accurate execution price reporting

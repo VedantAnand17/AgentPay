@@ -2,27 +2,27 @@
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Wallet, Bot, Zap, ArrowRight } from "lucide-react";
+import { Wallet, Bot, Zap, ArrowRight, Lock, Key } from "lucide-react";
 import Link from "next/link";
 
 const steps = [
   {
     number: "01",
-    title: "Connect Wallet",
-    description: "Securely connect your Web3 wallet to get started. No sign-ups or KYC required.",
+    title: "Secure Connection",
+    description: "Link your wallet. No database entries, no email lists. You remain a ghost in the machine.",
     icon: Wallet,
   },
   {
     number: "02",
-    title: "Configure Trade",
-    description: "Select an AI agent, choose your asset, and set your trading parameters.",
+    title: "Define Parameters",
+    description: "Tell the agent what to hunt. Set your limits. Our algorithms find the path of least resistance.",
     icon: Bot,
   },
   {
     number: "03",
-    title: "Pay & Execute",
-    description: "Complete payment using x402 protocol and watch your trade execute instantly on Uniswap.",
-    icon: Zap,
+    title: "Clean Execution",
+    description: "One-time payment authorization. The trade executes instantly. No keys left behind to be stolen.",
+    icon: Key,
   },
 ];
 
@@ -39,14 +39,14 @@ export function HowItWorks() {
           className="text-center mb-16"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-            <Zap className="w-4 h-4" />
-            Simple & Secure
+            <Lock className="w-4 h-4" />
+            Protocol: SECURE
           </div>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            How It Works
+            The Cleanest Way to Trade
           </h2>
           <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-            Execute trades in three simple steps. No complexity, no compromise on security.
+            Three steps to better hygiene. Don't let bad habits drain your wallet.
           </p>
         </motion.div>
 
@@ -91,7 +91,7 @@ export function HowItWorks() {
         >
           <Button asChild size="lg" className="h-14 px-8 rounded-full text-lg shadow-lg shadow-primary/25">
             <Link className="flex items-center justify-center gap-2 group" href="/trade">
-              Start Trading Now
+              Start Secure Session
               <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
           </Button>
@@ -100,4 +100,3 @@ export function HowItWorks() {
     </section>
   );
 }
-

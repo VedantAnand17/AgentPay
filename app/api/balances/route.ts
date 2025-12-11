@@ -1,7 +1,7 @@
 // GET /api/balances?address=0x...&symbol=BTC
 // Returns token balance for a given address and symbol
 import { NextRequest, NextResponse } from "next/server";
-import { getTokenBalance } from "@/lib/uniswap";
+import { getTokenBalanceV3 } from "@/lib/uniswap-v3";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const balance = await getTokenBalance(address, symbol.toUpperCase());
+    const balance = await getTokenBalanceV3(address, symbol.toUpperCase());
 
     return NextResponse.json({
       address,
@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
 
 

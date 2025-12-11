@@ -10,10 +10,13 @@ const useMainnetFacilitator = process.env.X402_ENV === "mainnet";
 const facilitatorUrl = process.env.FACILITATOR_URL || "https://x402.org/facilitator";
 
 // USDC addresses: Base Sepolia testnet vs Base mainnet
-const BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+// Note: For Base Sepolia, we use the deployed pool's MockUSDC address
+// This ensures consistency with the Uniswap V4 pool configuration
+const BASE_SEPOLIA_USDC = process.env.BASE_SEPOLIA_USDC_ADDRESS || "0xB6c34A382a45F93682B03dCa9C48e3710e76809F"; // MockUSDC from deployed pool
 const BASE_MAINNET_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 // Use appropriate USDC address based on network, or allow override via env var
+// X402_ASSET_ADDRESS env var takes precedence for flexibility
 const X402_ASSET_ADDRESS = process.env.X402_ASSET_ADDRESS || 
   (useMainnetFacilitator || X402_NETWORK === "base" 
     ? BASE_MAINNET_USDC 
@@ -47,7 +50,7 @@ export function getX402PaymentConfig(intent: TradeIntent): {
     network: useMainnetFacilitator ? "base" : "base-sepolia",
     address: X402_PAYMENT_ADDRESS,
     config: {
-      description: `Execute ${intent.side} trade for ${intent.symbol} with ${intent.leverage}x leverage`,
+      description: `Execute ${intent.side} trade for ${intent.symbol}`,
       inputSchema: {
         type: "object",
         properties: {

@@ -21,18 +21,17 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PaymentCheckout } from "@/components/ui/payment-checkout";
 import { motion, AnimatePresence } from "framer-motion";
-import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, TrendingUp, Loader2, Zap } from "lucide-react";
+import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, TrendingUp, Loader2, Zap, ShieldCheck, Activity, Terminal, Lock, Key, Cpu, Radio, Network } from "lucide-react";
 
 export default function TradePage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [symbol, setSymbol] = useState<string>("BTC");
   const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [size, setSize] = useState<string>("0.01");
-  const [leverage, setLeverage] = useState<string>("2");
+  const [size, setSize] = useState<string>("10");
+  const [leverage] = useState<string>("1"); // Hidden - not used for spot trades
   const [suggestion, setSuggestion] = useState<any>(null);
   const [tradeIntent, setTradeIntent] = useState<TradeIntent | null>(null);
   const [executedTrade, setExecutedTrade] = useState<any>(null);
@@ -137,8 +136,8 @@ export default function TradePage() {
       const data = await res.json();
       setSuggestion(data);
       setSide(data.side);
-      setSize(data.size.toString());
-      setLeverage(data.leverage.toString());
+      // Don't overwrite user's size - keep their entered value
+      // setSize(data.size.toString());
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -147,7 +146,7 @@ export default function TradePage() {
   };
 
   const handleCreatePaymentRequest = async () => {
-    if (!address || !selectedAgent || !symbol || !side || !size || !leverage) {
+    if (!address || !selectedAgent || !symbol || !side || !size) {
       setError("Please connect wallet and fill in all fields");
       return;
     }
@@ -341,6 +340,7 @@ export default function TradePage() {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      second: '2-digit',
     });
   };
 
@@ -389,7 +389,6 @@ export default function TradePage() {
       setSymbol(trade.tradeIntent.symbol);
       setSide("sell");
       setSize(trade.tradeIntent.size.toString());
-      setLeverage(trade.tradeIntent.leverage.toString());
 
       // Scroll to the trade form
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -401,10 +400,13 @@ export default function TradePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-background dark:via-slate-950 dark:to-background pt-24 pb-12">
-      <div className="bg-grid-small-black dark:bg-grid-small-white fixed inset-0 z-0 pointer-events-none opacity-30" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-transparent to-emerald-500/5" />
-
+    <div className="min-h-screen bg-black pt-24 pb-12 font-mono text-foreground relative">
+      {/* Background Elements */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-grid-small-white/[0.05]" />
+        <div className="scanlines opacity-10" />
+      </div>
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
 
         {/* Header Section */}
@@ -412,45 +414,63 @@ export default function TradePage() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4"
+          className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-6 border-b border-white/10 pb-6"
         >
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-2">
-              Trade Console
+          <div className="space-y-1">
+             <div className="flex items-center gap-2 text-xs font-mono text-primary/80 uppercase tracking-widest mb-1">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                System Status: <span className="text-primary font-bold">ONLINE</span>
+             </div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground uppercase">
+              Command <span className="text-primary">Center</span>
             </h1>
-            <p className="text-muted-foreground text-lg">Execute automated trades with AI agents.</p>
+            <p className="text-muted-foreground text-sm font-light flex items-center gap-2 uppercase tracking-wide">
+               <ShieldCheck className="w-4 h-4" />
+               Secure Uplink V1.0.4 Established
+            </p>
           </div>
-          <div className="flex gap-3">
+          
+          <div className="flex flex-col items-end gap-3">
+             {/* Urgency Ticker */}
+             <div className="flex items-center gap-3 bg-red-950/30 border border-red-500/30 px-3 py-1.5">
+                <Activity className="w-4 h-4 text-red-500 animate-pulse" />
+                <span className="text-xs font-mono font-medium text-red-500 uppercase tracking-widest">
+                   Load: 94% [HIGH]
+                </span>
+             </div>
+             
+             <div className="flex gap-3">
             {isConnected ? (
               <>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white dark:bg-card px-4 py-2 rounded-full border shadow-sm flex items-center gap-2 text-sm font-medium backdrop-blur-sm"
+                  className="bg-black border border-white/10 px-4 py-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider"
                 >
                   <motion.div
                     animate={{
                       scale: chainId === baseSepolia.id ? [1, 1.2, 1] : 1,
                     }}
                     transition={{ duration: 0.5, repeat: chainId !== baseSepolia.id ? Infinity : 0, repeatDelay: 2 }}
-                    className={`w-2 h-2 rounded-full ${chainId === baseSepolia.id ? 'bg-green-500' : 'bg-red-500'}`}
+                    className={`w-2 h-2 rounded-full ${chainId === baseSepolia.id ? 'bg-primary' : 'bg-red-500'}`}
                   />
                   {chainId === baseSepolia.id ? 'Base Sepolia' : 'Wrong Network'}
                 </motion.div>
-                <Button onClick={() => open()} variant="outline" className="rounded-full border-2 shadow-sm">
+                <Button onClick={() => open()} variant="outline" className="border-white/10 rounded-none hover:bg-white/5 uppercase text-xs tracking-wider">
                   <Wallet className="w-4 h-4 mr-2" />
                   {formatAddress(address || "")}
                 </Button>
-                <Button onClick={() => disconnect()} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive rounded-full">
+                <Button onClick={() => disconnect()} variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 rounded-none">
                   <ArrowRightLeft className="w-4 h-4" />
                 </Button>
               </>
             ) : (
-              <Button onClick={() => open()} size="lg" className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+              <Button onClick={() => open()} size="lg" className="rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all uppercase tracking-widest font-bold">
                 <Wallet className="w-4 h-4 mr-2" />
-                Connect Wallet
+                Initialize Wallet
               </Button>
             )}
+            </div>
           </div>
         </motion.div>
 
@@ -462,15 +482,33 @@ export default function TradePage() {
               exit={{ opacity: 0, y: -20 }}
               className="mb-8"
             >
-              <Alert className="border-primary/20 bg-primary/5">
+              <Alert className="border-primary/50 bg-primary/5 rounded-none">
+                <div className="flex items-center gap-2">
                 <Info className="w-4 h-4 text-primary" />
-                <AlertTitle>Wallet Connection Required</AlertTitle>
-                <AlertDescription>
-                  Please connect your wallet to access trading features and executed payments.
+                <AlertTitle className="text-primary font-bold uppercase tracking-wider text-xs">Auth Required</AlertTitle>
+                </div>
+                <AlertDescription className="text-primary/80 text-xs font-mono mt-1">
+                  Connect wallet to access secure trading execution layer.
                 </AlertDescription>
               </Alert>
             </motion.div>
           )}
+
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 space-y-4"
+          >
+            <div className="border border-blue-900/50 bg-blue-950/10 p-4 flex items-start gap-3">
+              <Info className="h-4 w-4 text-blue-400 mt-1" />
+              <div>
+                <h4 className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">Supported Pair</h4>
+                <p className="text-blue-300/80 text-xs font-mono">
+                  BTC (WBTC) / USDC [Pool: <span className="text-blue-200">0x657E...cBb0b6</span>]
+                </p>
+              </div>
+            </div>
+          </motion.div>
 
           {error && (
             <motion.div
@@ -479,10 +517,10 @@ export default function TradePage() {
               exit={{ opacity: 0, y: -20 }}
               className="mb-8"
             >
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="rounded-none border-red-500/50 bg-red-950/20">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertTitle className="uppercase tracking-wider font-bold text-xs">System Error</AlertTitle>
+                <AlertDescription className="font-mono text-xs">{error}</AlertDescription>
               </Alert>
             </motion.div>
           )}
@@ -492,29 +530,32 @@ export default function TradePage() {
 
           {/* Left Column: Trade Form */}
           <div className="lg:col-span-7 space-y-6">
-            <Card className="glass-card overflow-hidden border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/5 hover:shadow-2xl transition-all duration-300">
-              <CardHeader className="bg-gradient-to-r from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 border-b pb-4">
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                  </div>
-                  Trade Configuration
+            <Card className="bg-black border border-white/10 rounded-none shadow-none">
+              <CardHeader className="border-b border-white/10 pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl uppercase tracking-widest font-bold">
+                  <Terminal className="w-5 h-5 text-primary" />
+                  Operation Parameters
                 </CardTitle>
-                <CardDescription className="text-base mt-2">Configure your AI-driven trade parameters.</CardDescription>
+                <CardDescription className="text-xs font-mono uppercase text-muted-foreground mt-1">
+                  Configure agent instructions. Encryption active.
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
 
                 {/* Agent & Symbol Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="agent" className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Select Agent</Label>
+                    <Label htmlFor="agent" className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Designated Agent</Label>
                     <Select
                       id="agent"
                       value={selectedAgent}
-                      onChange={(e) => setSelectedAgent(e.target.value)}
-                      className="input-premium"
+                      onChange={(e) => {
+                        setSelectedAgent(e.target.value);
+                        setTradeIntent(null);
+                      }}
+                      className="bg-black border-white/20 rounded-none focus:border-primary text-sm font-mono h-12"
                     >
-                      <option value="">Choose an Agent...</option>
+                      <option value="">[ SELECT OPERATIVE ]</option>
                       {agents.map((agent) => (
                         <option key={agent.id} value={agent.id}>
                           {agent.name}
@@ -524,72 +565,94 @@ export default function TradePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="symbol" className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Asset</Label>
+                    <Label htmlFor="symbol" className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Target Asset</Label>
                     <Select
                       id="symbol"
                       value={symbol}
-                      onChange={(e) => setSymbol(e.target.value)}
-                      className="input-premium font-mono"
+                      onChange={(e) => {
+                        setSymbol(e.target.value);
+                        setTradeIntent(null);
+                      }}
+                      className="bg-black border-white/20 rounded-none focus:border-primary text-sm font-mono h-12"
                     >
-                      <option value="BTC">BTC / USD</option>
-                      <option value="ETH">ETH / USD</option>
-                      <option value="SOL">SOL / USD</option>
+                      <option value="BTC">BTC (WBTC) / USDC</option>
                     </Select>
                   </div>
                 </div>
 
                 {/* Side Selection - Segmented Control */}
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Direction</Label>
-                  <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                  <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Strategy Mode</Label>
+                  <div className="grid grid-cols-2 gap-4">
                     <button
-                      onClick={() => setSide("buy")}
-                      className={`py-2 text-sm font-medium rounded-md transition-all ${side === "buy"
-                        ? "bg-white dark:bg-background text-primary shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setSide("buy");
+                        setTradeIntent(null);
+                      }}
+                      className={`h-12 border flex items-center justify-center gap-2 transition-all font-mono uppercase text-xs tracking-wider font-bold ${side === "buy"
+                        ? "bg-green-950/30 border-green-500 text-green-500"
+                        : "bg-black border-white/10 text-muted-foreground hover:border-white/30"
                         }`}
                     >
-                      Buy / Long
+                      <Radio className={`w-3 h-3 ${side === "buy" ? "fill-current" : ""}`} />
+                      ACQUIRE (LONG)
                     </button>
                     <button
-                      onClick={() => setSide("sell")}
-                      className={`py-2 text-sm font-medium rounded-md transition-all ${side === "sell"
-                        ? "bg-white dark:bg-background text-destructive shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setSide("sell");
+                        setTradeIntent(null);
+                      }}
+                      className={`h-12 border flex items-center justify-center gap-2 transition-all font-mono uppercase text-xs tracking-wider font-bold ${side === "sell"
+                        ? "bg-red-950/30 border-red-500 text-red-500"
+                        : "bg-black border-white/10 text-muted-foreground hover:border-white/30"
                         }`}
                     >
-                      Sell / Short
+                      <Radio className={`w-3 h-3 ${side === "sell" ? "fill-current" : ""}`} />
+                      LIQUIDATE (SHORT)
                     </button>
                   </div>
                 </div>
 
-                {/* Size & Leverage Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="size" className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Size (ETH)</Label>
+                {/* Size Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="size" className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                    Deployment Size {side === "buy" ? "(USDC)" : "(cbBTC)"}
+                  </Label>
+                  <div className="relative">
                     <Input
                       id="size"
                       type="number"
                       value={size}
-                      onChange={(e) => setSize(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                          setSize(value);
+                          setTradeIntent(null);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        const numValue = parseFloat(value);
+                        if (!value || isNaN(numValue) || numValue < 0.01) {
+                          setSize("0.01");
+                        } else {
+                          setSize(numValue.toFixed(2));
+                        }
+                        setTradeIntent(null);
+                      }}
                       step="0.01"
                       min="0.01"
-                      className="input-premium font-mono text-lg"
+                      className="bg-black border-white/20 rounded-none h-14 text-lg font-mono pl-4 focus:border-primary focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
                     />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
+                      {side === "buy" ? "USDC" : "WBTC"}
+                    </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="leverage" className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Leverage (x)</Label>
-                    <Input
-                      id="leverage"
-                      type="number"
-                      value={leverage}
-                      onChange={(e) => setLeverage(e.target.value)}
-                      min="1"
-                      max="10"
-                      className="input-premium font-mono text-lg"
-                    />
-                  </div>
+                  {side === "buy" && parseFloat(size) > 25 && (
+                    <p className="text-[10px] text-amber-500 mt-1 font-mono uppercase">
+                      ⚠️ Limit Warning: ${size} exceeds testnet pool guidelines.
+                    </p>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -598,24 +661,25 @@ export default function TradePage() {
                     onClick={handleGetSuggestion}
                     disabled={loading || !selectedAgent || !symbol}
                     variant="outline"
-                    className="w-full h-12 border-dashed border-2 hover:border-primary hover:text-primary transition-all"
+                    className="w-full h-12 rounded-none border-dashed border-white/20 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all font-mono text-xs uppercase tracking-widest"
                   >
-                    ✨ Ask Agent for Suggestion
+                    <Cpu className="w-4 h-4 mr-2" />
+                    Request Agent Analysis
                   </Button>
 
                   {suggestion && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="bg-primary/5 border border-primary/20 rounded-lg p-4"
+                      className="bg-primary/5 border border-primary/20 p-4"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="bg-primary/20 p-2 rounded-full">
-                          <Info className="w-4 h-4 text-primary" />
+                        <div className="bg-primary/10 p-2">
+                          <Terminal className="w-4 h-4 text-primary" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-primary mb-1">Agent Recommendation</h4>
-                          <p className="text-sm text-foreground/80">{suggestion.reason}</p>
+                          <h4 className="font-bold text-primary text-xs uppercase tracking-wider mb-1">Agent Recommendation</h4>
+                          <p className="text-xs font-mono text-foreground/80">{suggestion.reason}</p>
                         </div>
                       </div>
                     </motion.div>
@@ -625,22 +689,44 @@ export default function TradePage() {
             </Card>
 
             {/* Execution Card */}
-            <Card className="glass-card border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/5 hover:shadow-2xl transition-all duration-300">
+            <Card className="bg-black border border-white/10 rounded-none shadow-none">
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold text-lg">Order Summary</h3>
-                      {tradeIntent && tradeIntent.paymentRequestId && (
-                        <p className="text-sm text-muted-foreground font-mono">
-                          ID: {tradeIntent.paymentRequestId.slice(0, 12)}...
-                        </p>
-                      )}
-                    </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Network className="w-4 h-4" />
+                      Execution Manifest
+                    </h3>
+                    
                     {tradeIntent && (
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Est. Cost</p>
-                        <p className="font-bold text-xl">${tradeIntent.expectedPaymentAmount} USD</p>
+                      <div className="space-y-2 bg-black border border-white/10 p-4 font-mono text-sm">
+                        {tradeIntent.paymentRequestId && (
+                           <div className="flex justify-between items-center pb-2 border-b border-white/10 mb-2">
+                              <span className="text-muted-foreground text-[10px] uppercase">ID Reference</span>
+                              <span className="text-xs">{tradeIntent.paymentRequestId.slice(0, 8)}...{tradeIntent.paymentRequestId.slice(-4)}</span>
+                           </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground text-[10px] uppercase">Trade Volume</span>
+                          <span className="font-bold text-primary">
+                            {tradeIntent.side === "buy" 
+                              ? `$${tradeIntent.size.toFixed(2)} USDC`
+                              : `${tradeIntent.size.toFixed(6)} ${tradeIntent.symbol}`
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground text-[10px] uppercase">Relay Fee</span>
+                          <span>${parseFloat(tradeIntent.expectedPaymentAmount).toFixed(6)} USD</span>
+                        </div>
+                        {tradeIntent.side === "buy" && (
+                          <div className="border-t border-white/10 pt-2 mt-2">
+                            <div className="flex justify-between items-center text-primary">
+                              <span className="uppercase tracking-wider text-[10px] font-bold">Total Cost</span>
+                              <span className="font-bold">${(tradeIntent.size + parseFloat(tradeIntent.expectedPaymentAmount)).toFixed(6)} USD</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -649,33 +735,32 @@ export default function TradePage() {
                     <Button
                       onClick={handleCreatePaymentRequest}
                       disabled={loading || !isConnected || !selectedAgent}
-                      className="w-full h-14 text-lg font-semibold shadow-lg shadow-primary/25 rounded-xl hover:shadow-primary/40 transition-all"
-                      variant="default"
+                      className="w-full h-14 rounded-none bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-widest text-sm"
                     >
                       {loading ? (
                         <>
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Creating Intent...
+                          Encrypting...
                         </>
                       ) : (
-                        "Create Order Intent"
+                        "Initialize Secure Intent"
                       )}
                     </Button>
                   ) : !executedTrade ? (
                     <Button
                       onClick={handleExecuteTrade}
                       disabled={loading || !tradeIntent || !isConnected}
-                      className="w-full h-14 text-lg font-semibold shadow-lg shadow-primary/25 rounded-xl bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 hover:shadow-primary/40 transition-all"
+                      className="w-full h-14 rounded-none bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-widest text-sm"
                     >
                       {loading ? (
                         <>
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Processing...
+                          Authorizing...
                         </>
                       ) : (
                         <>
-                          <Zap className="w-5 h-5 mr-2" />
-                          Pay & Execute Trade
+                          <Lock className="w-5 h-5 mr-2" />
+                          Authorize & Execute
                         </>
                       )}
                     </Button>
@@ -686,57 +771,39 @@ export default function TradePage() {
                         setTradeIntent(null);
                       }}
                       variant="outline"
-                      className="w-full h-14 text-lg rounded-xl"
+                      className="w-full h-14 rounded-none border-white/20 hover:bg-white/5 uppercase tracking-widest font-bold text-sm"
                     >
-                      Start New Trade
+                      Reset System
                     </Button>
                   )}
 
                   {executedTrade && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                      className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-500/30 rounded-xl p-6 mt-4"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-green-950/20 border border-green-500/30 p-4 mt-4"
                     >
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                        className="flex items-center gap-3 mb-4"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
-                          <CheckCircle2 className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="font-bold text-lg text-green-700 dark:text-green-400">Trade Executed Successfully</h3>
-                      </motion.div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        <h3 className="font-bold text-sm uppercase tracking-wider text-green-500">Execution Confirmed</h3>
+                      </div>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <motion.div
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.3 }}
-                          className="bg-white/60 dark:bg-background/60 p-4 rounded-lg border border-green-200/50 dark:border-green-800/50"
-                        >
-                          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Execution Price</p>
-                          <p className="font-mono font-bold text-lg">${executedTrade.executionPrice.toFixed(2)}</p>
-                        </motion.div>
-                        <motion.div
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.4 }}
-                          className="bg-white/60 dark:bg-background/60 p-4 rounded-lg border border-green-200/50 dark:border-green-800/50"
-                        >
-                          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Transaction</p>
+                      <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                        <div className="bg-black/50 p-2 border border-green-500/20">
+                          <p className="text-muted-foreground mb-1 uppercase text-[10px]">Price</p>
+                          <p className="font-bold text-green-400">${executedTrade.executionPrice.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-black/50 p-2 border border-green-500/20">
+                          <p className="text-muted-foreground mb-1 uppercase text-[10px]">TX Hash</p>
                           <a
                             href={`https://sepolia.basescan.org/tx/${executedTrade.swapTxHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-mono font-medium text-primary hover:underline truncate block text-sm"
+                            className="text-primary hover:underline truncate block"
                           >
                             {formatAddress(executedTrade.swapTxHash)}
                           </a>
-                        </motion.div>
+                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -747,68 +814,83 @@ export default function TradePage() {
 
           {/* Right Column: Recent Executions */}
           <div className="lg:col-span-5">
-            <Card className="h-full glass-card border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/5 flex flex-col hover:shadow-2xl transition-all duration-300">
-              <CardHeader className="border-b pb-4 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4 text-primary" />
-                  </div>
-                  Recent Activity
+            <Card className="h-full bg-black border border-white/10 rounded-none shadow-none flex flex-col">
+              <CardHeader className="border-b border-white/10 pb-4">
+                <CardTitle className="flex items-center gap-2 font-mono uppercase tracking-widest text-xs font-bold">
+                   <Activity className="w-4 h-4 text-primary animate-pulse" />
+                   Live Network Feed
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0 flex-1 overflow-auto max-h-[600px]">
+              <CardContent className="p-0 flex-1 overflow-auto max-h-[600px] font-mono text-xs">
                 {recentTrades.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                    <TrendingUp className="w-12 h-12 mb-3 opacity-20" />
-                    <p>No trades executed yet</p>
+                    <TrendingUp className="w-8 h-8 mb-3 opacity-20" />
+                    <p className="uppercase tracking-wider text-[10px]">No Data Stream</p>
                   </div>
                 ) : (
-                  <div className="divide-y">
+                  <div className="divide-y divide-white/5">
                     {recentTrades.map((trade) => (
-                      <div key={trade.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <div key={trade.id} className="p-4 hover:bg-white/5 transition-colors group">
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${trade.tradeIntent?.side === 'buy'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            <span className={`px-1.5 py-0.5 text-[10px] font-bold uppercase border ${trade.tradeIntent?.side === 'buy'
+                              ? 'border-green-500/50 text-green-500 bg-green-500/10'
+                              : 'border-red-500/50 text-red-500 bg-red-500/10'
                               }`}>
                               {trade.tradeIntent?.side}
                             </span>
-                            <span className="font-bold">{trade.tradeIntent?.symbol}</span>
+                            <span className="font-bold text-foreground">{trade.tradeIntent?.symbol}</span>
+                            {trade.isOpen !== undefined && (
+                              <span className={`text-[10px] uppercase tracking-wider ${
+                                trade.isOpen ? 'text-blue-400' : 'text-muted-foreground'
+                              }`}>
+                                [{trade.isOpen ? 'OPEN' : 'CLOSED'}]
+                              </span>
+                            )}
                           </div>
-                          <span className="text-xs text-muted-foreground">{formatDate(trade.timestamp)}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(trade.timestamp)}</span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-sm text-foreground/80 mb-3">
-                          <div>
-                            <span className="text-muted-foreground text-xs mr-2">Size:</span>
-                            <span className="font-mono">{trade.tradeIntent?.size}</span>
+                        <div className="text-muted-foreground/80 mb-2 space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span>SIZE:</span>
+                            <span className="text-foreground">{trade.tradeIntent?.size}</span>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground text-xs mr-2">Lev:</span>
-                            <span className="font-mono">{trade.tradeIntent?.leverage}x</span>
+                          <div className="flex justify-between items-center">
+                            <span>ENTRY:</span>
+                            <span className="text-foreground">${trade.executionPrice.toFixed(2)}</span>
                           </div>
+                          {trade.pnl && (
+                            <div className="pt-2 mt-2 border-t border-white/5">
+                               <div className="flex justify-between items-center">
+                                  <span>PNL:</span>
+                                  <span className={trade.pnl.isProfit ? "text-green-500" : "text-red-500"}>
+                                     {trade.pnl.isProfit ? '+' : ''}{trade.pnl.value.toFixed(2)} ({trade.pnl.percentage.toFixed(2)}%)
+                                  </span>
+                               </div>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center pt-2">
                           <a
                             href={`https://sepolia.basescan.org/tx/${trade.swapTxHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline flex items-center gap-1"
+                            className="text-[10px] text-primary/70 hover:text-primary flex items-center gap-1 uppercase"
                           >
-                            View Tx <ArrowRightLeft className="w-3 h-3" />
+                            [ VIEW TX ]
                           </a>
 
-                          {trade.tradeIntent?.side === "buy" && (
+                          {trade.tradeIntent?.side === "buy" && trade.isOpen && (
                             <Button
                               onClick={() => handleSellTrade(trade)}
                               disabled={loading || !isConnected}
                               size="sm"
                               variant="secondary"
-                              className="h-7 text-xs"
+                              className="h-6 text-[10px] rounded-none bg-white/10 hover:bg-white/20 text-foreground border border-white/10"
                             >
-                              Close / Sell
+                              LIQUIDATE
                             </Button>
                           )}
                         </div>
@@ -822,7 +904,7 @@ export default function TradePage() {
         </div>
       </div>
 
-      {/* Stripe-like Payment Checkout */}
+      {/* Payment Checkout Modal */}
       <PaymentCheckout
         open={showPaymentModal}
         onOpenChange={setShowPaymentModal}

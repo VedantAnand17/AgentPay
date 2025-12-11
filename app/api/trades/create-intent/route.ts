@@ -10,10 +10,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userAddress, agentId, symbol, side, size, leverage } = body;
 
-    // Validate required fields
-    if (!userAddress || !agentId || !symbol || !side || !size || !leverage) {
+    // Validate required fields (leverage is optional, defaults to 1 for spot trades)
+    if (!userAddress || !agentId || !symbol || !side || !size) {
       return NextResponse.json(
-        { error: "Missing required fields: userAddress, agentId, symbol, side, size, leverage" },
+        { error: "Missing required fields: userAddress, agentId, symbol, side, size" },
         { status: 400 }
       );
     }
@@ -25,9 +25,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate expected payment amount (flat fee for MVP, e.g., $0.001 per trade)
-    // In production, this could be a percentage or dynamic based on trade size
-    const expectedPaymentAmount = "0.001"; // $0.001 flat fee
+    // Validate symbol - only BTC (WBTC) is supported
+    const supportedSymbols = ["BTC", "WBTC"];
+    if (!supportedSymbols.includes(symbol.toUpperCase())) {
+      return NextResponse.json(
+        { error: `Symbol '${symbol}' is not supported. Only BTC (WBTC) is supported via the deployed Uniswap V3 pool.` },
+        { status: 400 }
+      );
+    }
+
+    // Calculate expected payment amount based on trade size
+    // Fee structure: 0.1% of trade size, minimum $0.001, maximum $1.00
+    const tradeSize = parseFloat(size);
+    const feePercentage = 0.001; // 0.1%
+    const calculatedFee = tradeSize * feePercentage;
+    const minFee = 0.001;
+    const maxFee = 1.0;
+    const expectedPaymentAmount = Math.max(minFee, Math.min(maxFee, calculatedFee)).toFixed(6);
 
     // Create trade intent
     const intent: TradeIntent = {
@@ -37,7 +51,7 @@ export async function POST(request: NextRequest) {
       symbol,
       side,
       size: parseFloat(size),
-      leverage: parseInt(leverage),
+      leverage: leverage ? parseInt(leverage) : 1, // Default to 1x for spot trades
       expectedPaymentAmount,
       status: "pending",
       createdAt: Date.now(),

@@ -61,8 +61,8 @@ export const trendFollowerAgent: (ctx: AgentContext) => AgentSuggestion = (ctx) 
   const isUptrend = trendStrength > 0.01; // 1% threshold
   const isDowntrend = trendStrength < -0.01;
   
-  // Stronger trend = higher leverage, but capped
-  const leverage = clamp(Math.floor(Math.abs(trendStrength) * 100) + 2, 2, 5);
+  // Leverage not used for spot trades, set to 1
+  const leverage = 1;
   const size = clamp(0.01 + Math.abs(trendStrength) * 0.1, 0.01, 0.05);
   
   const side: "buy" | "sell" = isUptrend ? "buy" : isDowntrend ? "sell" : "buy";
@@ -124,8 +124,8 @@ export const breakoutSniperAgent: (ctx: AgentContext) => AgentSuggestion = (ctx)
     reason = `Breakout in progress. ${side === "buy" ? "Bullish" : "Bearish"} momentum detected.`;
   }
   
-  // Breakout trades use moderate leverage
-  const leverage = clamp(3 + Math.floor(Math.random() * 2), 2, 5);
+  // Leverage not used for spot trades, set to 1
+  const leverage = 1;
   const size = clamp(0.02 + Math.random() * 0.02, 0.01, 0.05);
   
   return {
@@ -169,8 +169,8 @@ export const meanReversionAgent: (ctx: AgentContext) => AgentSuggestion = (ctx) 
     reason = `Price near mean. Defaulting to buy position.`;
   }
   
-  // Mean reversion uses conservative leverage
-  const leverage = clamp(2 + Math.floor(Math.abs(deviation) * 50), 2, 4);
+  // Leverage not used for spot trades, set to 1
+  const leverage = 1;
   const size = clamp(0.015 + Math.abs(deviation) * 0.05, 0.01, 0.05);
   
   return {

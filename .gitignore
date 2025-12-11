@@ -39,6 +39,13 @@ next-env.d.ts
 *.db
 *.db-journal
 
+# Foundry contracts
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+contracts/lib/
+
+
 
 
 

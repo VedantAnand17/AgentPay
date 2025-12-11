@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tradeIntents, executedTrades } from "@/lib/db";
 import { createX402TradeMiddleware } from "@/lib/x402-middleware";
-import { executeUniswapSwap } from "@/lib/uniswap";
+import { executeUniswapV3Swap } from "@/lib/uniswap-v3";
 import { randomBytes } from "crypto";
 
 async function executeTradeHandler(request: NextRequest, paymentInfo?: any, tradeIntentId?: string) {
@@ -42,8 +42,8 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any, trad
       tradeIntents.updateStatus(intentId, "paid");
     }
 
-    // Execute Uniswap spot swap on Base Sepolia
-    const { txHash, executionPrice } = await executeUniswapSwap({
+    // Execute Uniswap V3 spot swap on Base Sepolia
+    const { txHash, executionPrice } = await executeUniswapV3Swap({
       userAddress: intent.userAddress,
       symbol: intent.symbol,
       side: intent.side,

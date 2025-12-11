@@ -29,6 +29,14 @@ export type ExecutedTrade = {
   executionPrice: number;
   timestamp: number;
   status: "executed";
+  pnl?: {
+    value: number;
+    percentage: number;
+    type: "realized" | "unrealized";
+    isProfit: boolean;
+  };
+  isOpen?: boolean;
+  matchedTradeId?: string; // For closed trades, the ID of the matched buy/sell trade
 };
 
 export type AgentContext = {

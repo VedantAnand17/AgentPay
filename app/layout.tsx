@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import dynamic from "next/dynamic";
 import { Navbar } from "@/components/ui/navbar";
 
@@ -14,6 +14,12 @@ const fontBody = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-body",
+});
+
+const fontMono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mono",
 });
 
 // Dynamically import Providers with no SSR to avoid indexedDB errors
@@ -33,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${fontBody.variable} ${fontHeading.variable} antialiased min-h-screen bg-background font-sans`}>
+      <body className={`${fontBody.variable} ${fontHeading.variable} ${fontMono.variable} antialiased min-h-screen bg-background font-sans`}>
         <Providers>
           <Navbar />
           <main className="flex-1">
