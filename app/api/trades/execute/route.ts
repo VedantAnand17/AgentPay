@@ -3,15 +3,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tradeIntents, executedTrades } from "@/lib/db";
 import { createX402TradeMiddleware } from "@/lib/x402-middleware";
-import { openPerpPositionOnBaseSepolia } from "@/lib/perp";
+import { executeUniswapSwap } from "@/lib/uniswap";
 import { randomBytes } from "crypto";
 
-async function executeTradeHandler(request: NextRequest, paymentInfo?: any) {
+async function executeTradeHandler(request: NextRequest, paymentInfo?: any, tradeIntentId?: string) {
   try {
-    const body = await request.json();
-    const { tradeIntentId } = body;
+    // Get tradeIntentId from parameter or request body
+    let intentId = tradeIntentId;
+    if (!intentId) {
+      const body = await request.json();
+      intentId = body.tradeIntentId;
+    }
 
-    if (!tradeIntentId) {
+    if (!intentId) {
       return NextResponse.json(
         { error: "Missing required field: tradeIntentId" },
         { status: 400 }
@@ -19,7 +23,7 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any) {
     }
 
     // Load trade intent
-    const intent = tradeIntents.getById(tradeIntentId);
+    const intent = tradeIntents.getById(intentId);
     if (!intent) {
       return NextResponse.json(
         { error: "Trade intent not found" },
@@ -33,13 +37,13 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any) {
     
     // Update intent status to paid
     if (paymentId) {
-      tradeIntents.updateStatus(tradeIntentId, "paid", paymentId);
+      tradeIntents.updateStatus(intentId, "paid", paymentId);
     } else {
-      tradeIntents.updateStatus(tradeIntentId, "paid");
+      tradeIntents.updateStatus(intentId, "paid");
     }
 
-    // Open perp position on Base Sepolia
-    const { txHash, entryPrice } = await openPerpPositionOnBaseSepolia({
+    // Execute Uniswap spot swap on Base Sepolia
+    const { txHash, executionPrice } = await executeUniswapSwap({
       userAddress: intent.userAddress,
       symbol: intent.symbol,
       side: intent.side,
@@ -53,8 +57,8 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any) {
       tradeIntentId: intent.id,
       paymentRequestId: paymentId || intent.paymentRequestId,
       paymentStatus: "paid" as const,
-      perpTxHash: txHash,
-      entryPrice,
+      swapTxHash: txHash,
+      executionPrice,
       timestamp: Date.now(),
       status: "executed" as const,
     };
@@ -62,7 +66,7 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any) {
     executedTrades.create(executedTrade);
 
     // Update intent status to executed
-    tradeIntents.updateStatus(tradeIntentId, "executed");
+    tradeIntents.updateStatus(intentId, "executed");
 
     return NextResponse.json({
       executedTrade,
@@ -99,7 +103,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Create x402 middleware wrapper
-    const middleware = createX402TradeMiddleware(intent, executeTradeHandler);
+    // Pass tradeIntentId to handler to avoid reading body twice
+    const handlerWithId = (req: NextRequest, paymentInfo?: any) => 
+      executeTradeHandler(req, paymentInfo, tradeIntentId);
+    const middleware = createX402TradeMiddleware(intent, handlerWithId);
     
     // Execute with payment verification
     return middleware(request);

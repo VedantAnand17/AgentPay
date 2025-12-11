@@ -18,16 +18,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (side !== "long" && side !== "short") {
+    if (side !== "buy" && side !== "sell") {
       return NextResponse.json(
-        { error: "side must be 'long' or 'short'" },
+        { error: "side must be 'buy' or 'sell'" },
         { status: 400 }
       );
     }
 
-    // Calculate expected payment amount (flat fee for MVP, e.g., $5 per trade)
+    // Calculate expected payment amount (flat fee for MVP, e.g., $0.001 per trade)
     // In production, this could be a percentage or dynamic based on trade size
-    const expectedPaymentAmount = "5.00"; // $5 flat fee
+    const expectedPaymentAmount = "0.001"; // $0.001 flat fee
 
     // Create trade intent
     const intent: TradeIntent = {
