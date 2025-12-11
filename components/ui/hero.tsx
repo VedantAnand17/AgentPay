@@ -24,9 +24,11 @@ export function Hero() {
     return (
         <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
             {/* Background Elements */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none overflow-hidden">
+                <div className="absolute inset-0 bg-grid-small-black/[0.1] -z-10" />
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/20 blur-[100px] rounded-full mix-blend-multiply opacity-50 animate-pulse" />
                 <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-500/20 blur-[100px] rounded-full mix-blend-multiply opacity-50" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
             </div>
 
             <div className="container max-w-6xl mx-auto px-4">
