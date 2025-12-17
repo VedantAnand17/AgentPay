@@ -905,7 +905,7 @@ export default function TradePage() {
                    Live Network Feed
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0 flex-1 overflow-auto max-h-[600px] font-mono text-xs">
+              <CardContent className="p-0 flex-1 overflow-auto max-h-[600px] font-mono text-xs scrollbar-hide">
                 {recentTrades.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <TrendingUp className="w-8 h-8 mb-3 opacity-20" />

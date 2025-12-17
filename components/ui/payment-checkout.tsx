@@ -52,8 +52,19 @@ export function PaymentCheckout({
       setError("");
       setCurrentStep("payment");
       await onConfirm();
-      // Move to processing state - success will be triggered by executedTrade prop
-      setCurrentStep("processing");
+      // If this checkout is tied to a trade (has details), move to processing
+      // and wait for the parent to pass in an executedTrade.
+      // If there are no tradeDetails (consultancy payment), we can mark
+      // the flow as successful immediately and auto-close.
+      if (tradeDetails) {
+        setCurrentStep("processing");
+      } else {
+        setCurrentStep("success");
+        setTimeout(() => {
+          onOpenChange(false);
+          setCurrentStep("review");
+        }, 3000);
+      }
     } catch (err: any) {
       setError(err.message || "Payment failed");
       setCurrentStep("review");
