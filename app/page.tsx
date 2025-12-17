@@ -2,7 +2,8 @@ import { Hero } from "@/components/ui/hero";
 import { FeatureCard } from "@/components/ui/feature-card";
 import { HowItWorks } from "@/components/ui/how-it-works";
 import { CTASection } from "@/components/ui/cta-section";
-import { Bot, LineChart, ShieldCheck, Cpu, Globe, EyeOff, Zap, Terminal } from "lucide-react";
+import Link from "next/link";
+import { Bot, LineChart, ShieldCheck, Cpu, Globe, EyeOff, Zap, Terminal, Brain } from "lucide-react";
 
 export default function Home() {
   return (
@@ -19,48 +20,48 @@ export default function Home() {
         <div className="container max-w-6xl mx-auto px-4">
           <div className="text-center mb-16 space-y-4">
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight font-mono uppercase">
-              System <span className="text-primary">Architecture</span>
+              The Protocol <span className="text-primary">Specifications</span>
             </h2>
             <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto font-mono">
-              Optimized for autonomous agents. Zero latency. Zero trust.
+              Designed for the underworld of autonomous finance.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             <FeatureCard
-              icon={<Bot className="h-6 w-6" />}
-              title="Agent Sovereignty"
-              description="Your agent shouldn't have to beg for permission. Autonomous execution without the paper trail."
+              icon={<ShieldCheck className="h-6 w-6" />}
+              title="The Consultant Shield"
+              description="When you trade, you expose yourself. When you hire an AgentPay Consultant, they execute. You just pay the fee."
               delay={0.1}
             />
             <FeatureCard
-              icon={<ShieldCheck className="h-6 w-6" />}
-              title="Zero-Trust Relay"
-              description="We don't want your keys. We don't want your custody. We just move the money. Clean and simple."
+              icon={<EyeOff className="h-6 w-6" />}
+              title="Zero Paper Trail"
+              description="Traditional exchanges are honeypots for data brokers. AgentPay executes via ephemeral, one-time payment intents."
               delay={0.2}
             />
             <FeatureCard
-              icon={<LineChart className="h-6 w-6" />}
-              title="Deep Liquidity"
-              description="Direct access to Uniswap pools. Get the best price without exposing your strategy to the whole mempool."
+              icon={<Zap className="h-6 w-6" />}
+              title="Atomic Sovereignty"
+              description="Funds move only when the trade executes. No deposit addresses. No custody. You hold the keys until the very last second."
               delay={0.3}
             />
             <FeatureCard
-              icon={<EyeOff className="h-6 w-6" />}
-              title="Information Hygiene"
-              description="No API keys to leak. No long-lived permissions. Just one-time, cryptographically signed intents."
+              icon={<Bot className="h-6 w-6" />}
+              title="Agent-First API"
+              description="Built for machines, not humans. Clean endpoints, predictable responses, and 402 Payment Required status handling."
               delay={0.4}
             />
             <FeatureCard
-              icon={<Zap className="h-6 w-6" />}
-              title="Atomic Settlement"
-              description="Trades settle in the same block. Money in, money out. Don't leave your funds sitting on an exchange."
+              icon={<LineChart className="h-6 w-6" />}
+              title="Deep Liquidity Access"
+              description="Route directly to Uniswap V4 pools on Base Sepolia. Institutional grade execution without the KYC hurdles."
               delay={0.5}
             />
             <FeatureCard
               icon={<Globe className="h-6 w-6" />}
-              title="Permissionless Access"
-              description="No sign-ups, no KYC, no 'please wait for approval'. Just connect your agent and execute."
+              title="Permissionless Entry"
+              description="The 'Man' isn't watching here. No accounts to ban. No limits to impose. If you can pay the relay fee, you can trade."
               delay={0.6}
             />
           </div>
@@ -75,9 +76,9 @@ export default function Home() {
         <div className="container max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-muted-foreground text-sm font-mono">
           <p>© 2025 AgentPay. Information Hygiene Specialists.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
-            <a href="#" className="hover:text-primary transition-colors">/TERMS</a>
-            <a href="#" className="hover:text-primary transition-colors">/PRIVACY</a>
-            <a href="https://github.com/vedant/AgentPay" className="hover:text-primary transition-colors">/GITHUB</a>
+            <Link href="/terms" className="hover:text-primary transition-colors">/TERMS</Link>
+            <Link href="/privacy" className="hover:text-primary transition-colors">/PRIVACY</Link>
+            <a href="https://github.com/vedantanand17/AgentPay" className="hover:text-primary transition-colors">/GITHUB</a>
           </div>
         </div>
       </footer>

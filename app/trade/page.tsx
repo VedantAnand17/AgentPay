@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PaymentCheckout } from "@/components/ui/payment-checkout";
 import { motion, AnimatePresence } from "framer-motion";
-import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, TrendingUp, Loader2, Zap, ShieldCheck, Activity, Terminal, Lock, Key, Cpu, Radio, Network } from "lucide-react";
+import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, ArrowRight, TrendingUp, Loader2, Zap, ShieldCheck, Activity, Terminal, Lock, Key, Cpu, Radio, Network } from "lucide-react";
 
 export default function TradePage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -41,6 +41,8 @@ export default function TradePage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentRequirements, setPaymentRequirements] = useState<any>(null);
   const [pendingRequest, setPendingRequest] = useState<{ url: string; options: RequestInit } | null>(null);
+  const [pendingConsultancyRequest, setPendingConsultancyRequest] = useState<{ url: string; options: RequestInit } | null>(null);
+  const [isConsultancyPayment, setIsConsultancyPayment] = useState(false);
 
   // Wagmi hooks
   const { address, isConnected } = useAccount();
@@ -119,14 +121,52 @@ export default function TradePage() {
       return;
     }
 
+    if (!isConnected || !address) {
+      setError("Please connect your wallet first to pay for AI consultancy");
+      return;
+    }
+
+    // Check if wallet is on the correct chain (Base Sepolia)
+    if (chainId !== baseSepolia.id) {
+      try {
+        await switchChain({ chainId: baseSepolia.id });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } catch (switchError: any) {
+        setError(
+          `Please switch to Base Sepolia network (Chain ID: ${baseSepolia.id}) in your wallet. ` +
+          `Current chain: ${chainId}. Error: ${switchError.message || "Chain switch failed"}`
+        );
+        return;
+      }
+    }
+
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/agents/suggest", {
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+      const res = await fetch(`${baseUrl}/api/agents/suggest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: selectedAgent, symbol }),
       });
+
+      // If 402 Payment Required, show payment modal first
+      if (res.status === 402) {
+        const data = await res.json();
+        setPaymentRequirements(data);
+        setPendingConsultancyRequest({
+          url: `${baseUrl}/api/agents/suggest`,
+          options: {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ agentId: selectedAgent, symbol }),
+          },
+        });
+        setIsConsultancyPayment(true);
+        setShowPaymentModal(true);
+        setLoading(false);
+        return;
+      }
 
       if (!res.ok) {
         const data = await res.json();
@@ -254,7 +294,8 @@ export default function TradePage() {
   };
 
   const handleConfirmPayment = async () => {
-    if (!pendingRequest) return;
+    const requestToProcess = pendingRequest || pendingConsultancyRequest;
+    if (!requestToProcess) return;
 
     if (!walletClient || !isConnected || !walletClient.account) {
       setError("Wallet not connected. Please connect your wallet first.");
@@ -303,24 +344,36 @@ export default function TradePage() {
       // Use the fresh x402-fetch to handle the payment
       // This will create the payment signature and retry the request
       // MetaMask will pop up for signature approval (this is normal for EIP-712 signatures)
-      const resWithPayment = await freshFetchWithPayment(pendingRequest.url, pendingRequest.options);
+      const resWithPayment = await freshFetchWithPayment(requestToProcess.url, requestToProcess.options);
 
       if (!resWithPayment.ok) {
         const data = await resWithPayment.json();
-        throw new Error(data.error || "Failed to execute trade after payment");
+        throw new Error(data.error || "Failed to process request after payment");
       }
 
       const data = await resWithPayment.json();
-      setExecutedTrade(data.executedTrade);
 
-      // Refresh recent trades
-      const tradesRes = await fetch("/api/trades");
-      const tradesData = await tradesRes.json();
-      setRecentTrades(Array.isArray(tradesData) ? tradesData : []);
+      // Handle consultancy payment response
+      if (isConsultancyPayment) {
+        setSuggestion(data);
+        setSide(data.side);
+        setPendingConsultancyRequest(null);
+        setIsConsultancyPayment(false);
+        setPaymentRequirements(null);
+        setShowPaymentModal(false);
+      } else {
+        // Handle trade execution response
+        setExecutedTrade(data.executedTrade);
 
-      setPendingRequest(null);
-      setPaymentRequirements(null);
-      setShowPaymentModal(false);
+        // Refresh recent trades
+        const tradesRes = await fetch("/api/trades");
+        const tradesData = await tradesRes.json();
+        setRecentTrades(Array.isArray(tradesData) ? tradesData : []);
+
+        setPendingRequest(null);
+        setPaymentRequirements(null);
+        setShowPaymentModal(false);
+      }
     } catch (err: any) {
       console.error("Payment error:", err);
       throw err; // Re-throw to let PaymentCheckout handle it
@@ -657,29 +710,60 @@ export default function TradePage() {
 
                 {/* Action Buttons */}
                 <div className="pt-4 grid gap-4">
+                  {!suggestion && (
+                    <div className="bg-blue-950/20 border border-blue-500/30 p-3 mb-2">
+                      <div className="flex items-start gap-2">
+                        <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs font-mono text-blue-300/90">
+                            <span className="font-bold uppercase tracking-wider">Step 1:</span> Pay $0.10 for AI Consultancy to get expert trading recommendation.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <Button
                     onClick={handleGetSuggestion}
-                    disabled={loading || !selectedAgent || !symbol}
+                    disabled={loading || !selectedAgent || !symbol || !isConnected}
                     variant="outline"
                     className="w-full h-12 rounded-none border-dashed border-white/20 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all font-mono text-xs uppercase tracking-widest"
                   >
                     <Cpu className="w-4 h-4 mr-2" />
-                    Request Agent Analysis
+                    {loading ? "Processing..." : suggestion ? "Get New Consultancy" : "Pay $0.10 for AI Consultancy"}
                   </Button>
 
                   {suggestion && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="bg-primary/5 border border-primary/20 p-4"
+                      className="space-y-3"
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="bg-primary/10 p-2">
-                          <Terminal className="w-4 h-4 text-primary" />
+                      <div className="bg-primary/5 border border-primary/20 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="bg-primary/10 p-2">
+                            <Terminal className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-bold text-primary text-xs uppercase tracking-wider">AI Consultancy Result</h4>
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            </div>
+                            <p className="text-xs font-mono text-foreground/80 mb-2">{suggestion.reason}</p>
+                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                              Recommendation: <span className="text-primary font-bold">{suggestion.side.toUpperCase()}</span> {suggestion.size} {symbol}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-bold text-primary text-xs uppercase tracking-wider mb-1">Agent Recommendation</h4>
-                          <p className="text-xs font-mono text-foreground/80">{suggestion.reason}</p>
+                      </div>
+                      <div className="bg-green-950/20 border border-green-500/30 p-3">
+                        <div className="flex items-start gap-2">
+                          <ArrowRight className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs font-mono text-green-300/90">
+                              <span className="font-bold uppercase tracking-wider">Step 2:</span> Review recommendation above, adjust parameters if needed, then proceed to trade execution below.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -911,13 +995,13 @@ export default function TradePage() {
         paymentRequirements={paymentRequirements}
         onConfirm={handleConfirmPayment}
         loading={loading}
-        executedTrade={executedTrade}
-        tradeDetails={tradeIntent ? {
+        executedTrade={isConsultancyPayment ? undefined : executedTrade}
+        tradeDetails={isConsultancyPayment ? undefined : (tradeIntent ? {
           symbol: tradeIntent.symbol,
           side: tradeIntent.side,
           size: tradeIntent.size,
           leverage: tradeIntent.leverage,
-        } : undefined}
+        } : undefined)}
       />
     </div>
   );

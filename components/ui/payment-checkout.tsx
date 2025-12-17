@@ -68,13 +68,13 @@ export function PaymentCheckout({
   };
 
   // Service fee from x402 payment requirements
-  const serviceFee = paymentRequirements?.accepts?.[0]?.price || 
+  const serviceFee = paymentRequirements?.accepts?.[0]?.price ||
     `$${(Number(paymentRequirements?.accepts?.[0]?.maxAmountRequired || 0) / 1_000_000).toFixed(6)}`;
   const serviceFeeNumber = parseFloat(serviceFee.replace('$', '')) || 0;
-  
+
   // Calculate total cost for buy trades
   const tradeAmount = tradeDetails?.size || 0;
-  const totalCost = tradeDetails?.side === "buy" 
+  const totalCost = tradeDetails?.side === "buy"
     ? (tradeAmount + serviceFeeNumber).toFixed(6)
     : serviceFeeNumber.toFixed(6);
 
@@ -83,7 +83,7 @@ export function PaymentCheckout({
       <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-black border border-white/20 rounded-none shadow-2xl font-mono text-foreground">
         {/* Header Strip */}
         <div className="h-1 w-full bg-primary/50" />
-        
+
         <AnimatePresence mode="wait">
           {currentStep === "review" && (
             <motion.div
@@ -96,13 +96,13 @@ export function PaymentCheckout({
               <div className="p-6 border-b border-white/10">
                 <DialogHeader className="text-left space-y-1">
                   <div className="flex items-center justify-between">
-                     <DialogTitle className="text-lg font-bold uppercase tracking-widest flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-primary" />
-                        Verify Parameters
-                     </DialogTitle>
-                     <div className="px-2 py-0.5 border border-primary/30 text-[10px] text-primary uppercase bg-primary/10">
-                        Secure
-                     </div>
+                    <DialogTitle className="text-lg font-bold uppercase tracking-widest flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-primary" />
+                      Verify Parameters
+                    </DialogTitle>
+                    <div className="px-2 py-0.5 border border-primary/30 text-[10px] text-primary uppercase bg-primary/10">
+                      Secure
+                    </div>
                   </div>
                   <DialogDescription className="text-xs font-mono uppercase text-muted-foreground tracking-wide">
                     Confirm operation before encryption.
@@ -127,8 +127,8 @@ export function PaymentCheckout({
                     <div className="flex justify-between items-center border-b border-dashed border-white/10 pb-2">
                       <span className="text-muted-foreground uppercase">Volume</span>
                       <span className="font-bold">
-                        {tradeDetails.side === "buy" 
-                          ? `${tradeDetails.size} USDC` 
+                        {tradeDetails.side === "buy"
+                          ? `${tradeDetails.size} USDC`
                           : `${tradeDetails.size} ${tradeDetails.symbol}`}
                       </span>
                     </div>
@@ -139,34 +139,34 @@ export function PaymentCheckout({
                     {tradeDetails && tradeDetails.side === "buy" && (
                       <>
                         <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
-                           <span>Capital Allocation</span>
-                           <span>${tradeAmount.toFixed(2)} USDC</span>
+                          <span>Capital Allocation</span>
+                          <span>${tradeAmount.toFixed(2)} USDC</span>
                         </div>
                         <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
-                           <span>Protocol Fee</span>
-                           <span>{serviceFee}</span>
+                          <span>Protocol Fee</span>
+                          <span>{serviceFee}</span>
                         </div>
                         <div className="border-t border-white/10 pt-2 mt-2 flex justify-between items-center">
-                           <span className="text-xs font-bold uppercase text-primary">Total Obligation</span>
-                           <div className="flex items-center gap-2">
-                              <Lock className="w-3 h-3 text-primary" />
-                              <span className="text-lg font-bold text-primary">${totalCost}</span>
-                           </div>
+                          <span className="text-xs font-bold uppercase text-primary">Total Obligation</span>
+                          <div className="flex items-center gap-2">
+                            <Lock className="w-3 h-3 text-primary" />
+                            <span className="text-lg font-bold text-primary">${totalCost}</span>
+                          </div>
                         </div>
                       </>
                     )}
                     {tradeDetails && tradeDetails.side === "sell" && (
                       <>
                         <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
-                           <span>Liquidation Vol</span>
-                           <span>{tradeAmount} {tradeDetails.symbol}</span>
+                          <span>Liquidation Vol</span>
+                          <span>{tradeAmount} {tradeDetails.symbol}</span>
                         </div>
-                         <div className="border-t border-white/10 pt-2 mt-2 flex justify-between items-center">
-                           <span className="text-xs font-bold uppercase text-primary">Protocol Fee</span>
-                           <div className="flex items-center gap-2">
-                              <Lock className="w-3 h-3 text-primary" />
-                              <span className="text-lg font-bold text-primary">{serviceFee}</span>
-                           </div>
+                        <div className="border-t border-white/10 pt-2 mt-2 flex justify-between items-center">
+                          <span className="text-xs font-bold uppercase text-primary">Protocol Fee</span>
+                          <div className="flex items-center gap-2">
+                            <Lock className="w-3 h-3 text-primary" />
+                            <span className="text-lg font-bold text-primary">{serviceFee}</span>
+                          </div>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-1">* Fee deducted from proceeds</p>
                       </>
@@ -216,8 +216,8 @@ export function PaymentCheckout({
               <div className="p-6 border-b border-white/10">
                 <DialogHeader className="text-left">
                   <DialogTitle className="text-lg font-bold uppercase tracking-widest text-amber-500 flex items-center gap-2">
-                     <AlertTriangle className="w-4 h-4" />
-                     Signature Required
+                    <AlertTriangle className="w-4 h-4" />
+                    Signature Required
                   </DialogTitle>
                 </DialogHeader>
               </div>
@@ -229,7 +229,7 @@ export function PaymentCheckout({
                     <Key className="w-8 h-8 text-primary animate-pulse" />
                   </div>
                 </div>
-                
+
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
                     {tradeDetails?.side === "buy" ? "Confirm Total" : "Confirm Fee"}
@@ -238,15 +238,15 @@ export function PaymentCheckout({
                     {tradeDetails?.side === "buy" ? `$${totalCost}` : serviceFee}
                   </p>
                 </div>
-                
+
                 <div className="bg-white/5 p-3 border border-white/10 w-full text-left">
-                   <div className="flex items-center gap-2 mb-1">
-                      <EyeOff className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Privacy Protocol</span>
-                   </div>
-                   <p className="text-[10px] text-muted-foreground/80">
-                      Zero-knowledge authorization. No keys stored. No logs kept.
-                   </p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <EyeOff className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Privacy Protocol</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/80">
+                    Zero-knowledge authorization. No keys stored. No logs kept.
+                  </p>
                 </div>
               </div>
 
@@ -275,25 +275,24 @@ export function PaymentCheckout({
               <div className="p-6 border-b border-white/10">
                 <DialogHeader>
                   <DialogTitle className="text-lg font-bold uppercase tracking-widest flex items-center gap-2">
-                     <Zap className="w-4 h-4 text-primary" />
-                     Relaying Intent
+                    <Zap className="w-4 h-4 text-primary" />
+                    Relaying Intent
                   </DialogTitle>
                 </DialogHeader>
               </div>
 
               <div className="p-12 flex flex-col items-center text-center space-y-8">
-                 <div className="relative">
-                    <div className="w-16 h-16 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold text-primary animate-pulse">
-                       0x...
-                    </div>
-                 </div>
-                 
-                 <div className="w-full space-y-2 font-mono text-xs text-left bg-black p-4 border border-white/10">
-                    <p className="text-green-500">> Verifying Signature... [OK]</p>
-                    <p className="text-green-500/80">> Establishing Tunnel... [OK]</p>
-                    <p className="text-primary animate-pulse">> Broadcasting to Base Sepolia...</p>
-                 </div>
+                <div className="relative">
+                  <div className="w-16 h-16 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold text-primary animate-pulse">
+                    0x...
+                  </div>
+                </div>
+                <div className="w-full space-y-2 font-mono text-xs text-left bg-black p-4 border border-white/10">
+                  <p className="text-green-500">&gt; Verifying Signature... [OK]</p>
+                  <p className="text-green-500/80">&gt; Establishing Tunnel... [OK]</p>
+                  <p className="text-primary animate-pulse">&gt; Broadcasting to Base Sepolia...</p>
+                </div>
               </div>
             </motion.div>
           )}
@@ -309,8 +308,8 @@ export function PaymentCheckout({
               <div className="p-6 border-b border-green-500/30 bg-green-500/10">
                 <DialogHeader>
                   <DialogTitle className="text-lg font-bold uppercase tracking-widest text-green-500 flex items-center gap-2">
-                     <CheckCircle2 className="w-4 h-4" />
-                     Operation Complete
+                    <CheckCircle2 className="w-4 h-4" />
+                    Operation Complete
                   </DialogTitle>
                 </DialogHeader>
               </div>
@@ -319,17 +318,17 @@ export function PaymentCheckout({
                 <div className="w-20 h-20 rounded-full border-2 border-green-500 bg-green-500/20 flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)]">
                   <CheckCircle2 className="w-10 h-10 text-green-500" />
                 </div>
-                
+
                 <div className="space-y-2">
                   <p className="font-bold text-lg uppercase tracking-wide">Execution Confirmed</p>
                   <p className="text-xs text-muted-foreground font-mono">
                     Transaction hash verified on Base Sepolia.
                   </p>
                 </div>
-                
+
                 <div className="flex items-center gap-2 px-3 py-1 bg-green-950/30 border border-green-500/30 rounded-full">
-                   <Activity className="w-3 h-3 text-green-500" />
-                   <span className="text-[10px] text-green-500 uppercase tracking-widest">Trace Cleared</span>
+                  <Activity className="w-3 h-3 text-green-500" />
+                  <span className="text-[10px] text-green-500 uppercase tracking-widest">Trace Cleared</span>
                 </div>
               </div>
 
@@ -348,3 +347,11 @@ export function PaymentCheckout({
     </Dialog>
   );
 }
+
+
+
+
+
+
+
+

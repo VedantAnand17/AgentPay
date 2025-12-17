@@ -5,71 +5,74 @@
 @layer base {
   :root {
     /* TERMINAL MODE - DEFAULT */
-    --background: 240 10% 3.9%; /* #09090b */
+    --background: 240 10% 3.9%;
+    /* #09090b */
     --foreground: 0 0% 98%;
 
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
- 
+
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
- 
-    --primary: 142 76% 36%; /* Neon Greenish */
+
+    --primary: 142 76% 36%;
+    /* Neon Greenish */
     --primary-foreground: 355.7 100% 97.3%;
- 
+
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
- 
+
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
- 
+
     --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
- 
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
- 
+
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 142 76% 36%;
-    
-    --radius: 0.5rem;
 
-    --gradient-hero: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    --radius: 0rem;
+
+    --gradient-hero: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
     --gradient-subtle: radial-gradient(circle at 50% 0%, rgba(34, 197, 94, 0.1), transparent 70%);
   }
 
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-    
-    --card: 240 10% 3.9%;
+
+    --card: 240 10% 4%;
     --card-foreground: 0 0% 98%;
-    
+
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    
-    --primary: 142 70% 50%; /* Brighter Neon Green */
+
+    --primary: 142 70% 50%;
+    /* Neon Green */
     --primary-foreground: 144 100% 10%;
-    
+
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
-    
+
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
-    
+
     --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
-    
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    
+
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 142 70% 50%;
 
-    --gradient-hero: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-    --gradient-subtle: radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.15), transparent 70%);
+    --gradient-hero: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    --gradient-subtle: radial-gradient(circle at 50% 0%, rgba(34, 197, 94, 0.15), transparent 70%);
   }
 }
 
@@ -77,13 +80,13 @@
   html {
     scroll-behavior: smooth;
   }
-  
+
   * {
     @apply border-border;
   }
-  
+
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary font-mono;
+    @apply bg-background text-foreground antialiased selection:bg-green-500/30 selection:text-green-500 font-mono;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
@@ -92,24 +95,26 @@
   .text-balance {
     text-wrap: balance;
   }
-  
+
   .glass {
     @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-xl;
   }
-  
+
   .glass-card {
-    @apply bg-card/60 backdrop-blur-sm border border-border/50 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-primary/40;
+    @apply bg-card/40 backdrop-blur-sm border border-white/10 shadow-none transition-all duration-300 hover:border-green-500/50 hover:bg-card/60;
+  }
+
+  .glass-card:hover {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
   }
 
   /* Scanline effect */
   .scanlines {
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0),
-      rgba(255, 255, 255, 0) 50%,
-      rgba(0, 0, 0, 0.2) 50%,
-      rgba(0, 0, 0, 0.2)
-    );
+    background: linear-gradient(to bottom,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0) 50%,
+        rgba(0, 0, 0, 0.2) 50%,
+        rgba(0, 0, 0, 0.2));
     background-size: 100% 4px;
     position: absolute;
     pointer-events: none;
@@ -126,13 +131,13 @@
   }
 
   .bg-gradient-hero-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-green-400 to-emerald-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-emerald-500 to-green-600;
   }
-  
+
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
-  
+
   .animate-pulse-subtle {
     animation: pulse-subtle 4s ease-in-out infinite;
   }
@@ -140,11 +145,18 @@
   .terminal-cursor::after {
     content: "▋";
     animation: blink 1s step-end infinite;
-    @apply text-primary ml-1;
+    @apply text-green-500 ml-1;
   }
 
   @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0;
+    }
   }
 }

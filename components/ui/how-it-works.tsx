@@ -2,27 +2,27 @@
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Wallet, Bot, Zap, ArrowRight, Lock, Key } from "lucide-react";
+import { Wallet, Bot, Zap, ArrowRight, Lock, Key, Brain } from "lucide-react";
 import Link from "next/link";
 
 const steps = [
   {
     number: "01",
-    title: "Secure Connection",
-    description: "Link your wallet. No database entries, no email lists. You remain a ghost in the machine.",
+    title: "Pay for AI Consultancy",
+    description: "Connect your wallet and pay for expert AI trading recommendations. One-time payment. No subscriptions. No commitments.",
     icon: Wallet,
   },
   {
     number: "02",
-    title: "Define Parameters",
-    description: "Tell the agent what to hunt. Set your limits. Our algorithms find the path of least resistance.",
+    title: "Get AI Recommendations",
+    description: "Our AI analyzes market conditions and provides actionable trading insights. You get the strategy, not just the execution.",
     icon: Bot,
   },
   {
     number: "03",
-    title: "Clean Execution",
-    description: "One-time payment authorization. The trade executes instantly. No keys left behind to be stolen.",
-    icon: Key,
+    title: "Trade Accordingly",
+    description: "Execute trades based on AI recommendations. One-time payment authorization. Clean execution. No keys left behind.",
+    icon: Zap,
   },
 ];
 
@@ -43,10 +43,10 @@ export function HowItWorks() {
             Protocol: SECURE
           </div>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            The Cleanest Way to Trade
+            AI Consultancy First, <span className="text-primary">Then Trade</span>
           </h2>
           <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-            Three steps to better hygiene. Don't let bad habits drain your wallet.
+            Pay for expert AI insights. Get actionable recommendations. Execute trades accordingly. Simple.
           </p>
         </motion.div>
 
@@ -91,7 +91,7 @@ export function HowItWorks() {
         >
           <Button asChild size="lg" className="h-14 px-8 rounded-full text-lg shadow-lg shadow-primary/25">
             <Link className="flex items-center justify-center gap-2 group" href="/trade">
-              Start Secure Session
+              Get AI Consultancy
               <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
           </Button>

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Lock, ArrowRight, ShieldAlert, Terminal } from "lucide-react";
+import { Lock, ArrowRight, ShieldAlert, Terminal, Brain } from "lucide-react";
 import Link from "next/link";
 
 export function CTASection() {
@@ -27,24 +27,24 @@ export function CTASection() {
           </div>
           
           <h2 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight mb-6 text-white font-mono uppercase">
-            Stop Leaving <span className="text-red-500">Fingerprints</span>.
+            Pay for <span className="text-red-500">AI Consultancy</span>.
           </h2>
           
           <p className="text-muted-foreground text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed font-mono">
-            Every second you wait, another log file captures your data. The network is filling up. Secure your channel before the gates close.
+            Get expert AI trading recommendations. Then execute trades accordingly. No API keys. No custody. Just pay for the consultancy and trade.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <Button asChild size="lg" className="h-16 px-10 rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all duration-300 font-mono text-lg uppercase tracking-wider group">
               <Link className="flex items-center justify-center gap-2" href="/trade">
                 <Terminal className="w-5 h-5" />
-                Initialize Agent
+                Get AI Consultancy
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
             
             <Button asChild variant="outline" size="lg" className="h-16 px-10 rounded-none border-white/10 hover:bg-white/5 text-slate-300 hover:text-white transition-all font-mono text-lg uppercase tracking-wider">
-              <a href="https://github.com/vedant/AgentPay" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/vedantanand17/AgentPay" target="_blank" rel="noopener noreferrer">
                 View Source Code
               </a>
             </Button>

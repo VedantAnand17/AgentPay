@@ -30,7 +30,7 @@ export function Navbar() {
                     <Link href="#how-it-works" className="hover:text-primary transition-colors">
                         /Protocol
                     </Link>
-                    <a href="https://github.com/vedant/AgentPay" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                    <a href="https://github.com/vedantanand17/AgentPay" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                         /Source
                     </a>
                 </div>
