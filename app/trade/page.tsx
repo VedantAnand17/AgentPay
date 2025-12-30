@@ -459,7 +459,7 @@ export default function TradePage() {
         <div className="absolute inset-0 bg-grid-small-white/[0.05]" />
         <div className="scanlines opacity-10" />
       </div>
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
 
         {/* Header Section */}
@@ -470,59 +470,59 @@ export default function TradePage() {
           className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-6 border-b border-white/10 pb-6"
         >
           <div className="space-y-1">
-             <div className="flex items-center gap-2 text-xs font-mono text-primary/80 uppercase tracking-widest mb-1">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                System Status: <span className="text-primary font-bold">ONLINE</span>
-             </div>
+            <div className="flex items-center gap-2 text-xs font-mono text-primary/80 uppercase tracking-widest mb-1">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              System Status: <span className="text-primary font-bold">ONLINE</span>
+            </div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground uppercase">
               Command <span className="text-primary">Center</span>
             </h1>
             <p className="text-muted-foreground text-sm font-light flex items-center gap-2 uppercase tracking-wide">
-               <ShieldCheck className="w-4 h-4" />
-               Secure Uplink V1.0.4 Established
+              <ShieldCheck className="w-4 h-4" />
+              Secure Uplink V1.0.4 Established
             </p>
           </div>
-          
+
           <div className="flex flex-col items-end gap-3">
-             {/* Urgency Ticker */}
-             <div className="flex items-center gap-3 bg-red-950/30 border border-red-500/30 px-3 py-1.5">
-                <Activity className="w-4 h-4 text-red-500 animate-pulse" />
-                <span className="text-xs font-mono font-medium text-red-500 uppercase tracking-widest">
-                   Load: 94% [HIGH]
-                </span>
-             </div>
-             
-             <div className="flex gap-3">
-            {isConnected ? (
-              <>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-black border border-white/10 px-4 py-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider"
-                >
+            {/* Urgency Ticker */}
+            <div className="flex items-center gap-3 bg-red-950/30 border border-red-500/30 px-3 py-1.5">
+              <Activity className="w-4 h-4 text-red-500 animate-pulse" />
+              <span className="text-xs font-mono font-medium text-red-500 uppercase tracking-widest">
+                Load: 94% [HIGH]
+              </span>
+            </div>
+
+            <div className="flex gap-3">
+              {isConnected ? (
+                <>
                   <motion.div
-                    animate={{
-                      scale: chainId === baseSepolia.id ? [1, 1.2, 1] : 1,
-                    }}
-                    transition={{ duration: 0.5, repeat: chainId !== baseSepolia.id ? Infinity : 0, repeatDelay: 2 }}
-                    className={`w-2 h-2 rounded-full ${chainId === baseSepolia.id ? 'bg-primary' : 'bg-red-500'}`}
-                  />
-                  {chainId === baseSepolia.id ? 'Base Sepolia' : 'Wrong Network'}
-                </motion.div>
-                <Button onClick={() => open()} variant="outline" className="border-white/10 rounded-none hover:bg-white/5 uppercase text-xs tracking-wider">
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-black border border-white/10 px-4 py-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider"
+                  >
+                    <motion.div
+                      animate={{
+                        scale: chainId === baseSepolia.id ? [1, 1.2, 1] : 1,
+                      }}
+                      transition={{ duration: 0.5, repeat: chainId !== baseSepolia.id ? Infinity : 0, repeatDelay: 2 }}
+                      className={`w-2 h-2 rounded-full ${chainId === baseSepolia.id ? 'bg-primary' : 'bg-red-500'}`}
+                    />
+                    {chainId === baseSepolia.id ? 'Base Sepolia' : 'Wrong Network'}
+                  </motion.div>
+                  <Button onClick={() => open()} variant="outline" className="border-white/10 rounded-none hover:bg-white/5 uppercase text-xs tracking-wider">
+                    <Wallet className="w-4 h-4 mr-2" />
+                    {formatAddress(address || "")}
+                  </Button>
+                  <Button onClick={() => disconnect()} variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 rounded-none">
+                    <ArrowRightLeft className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => open()} size="lg" className="rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all uppercase tracking-widest font-bold">
                   <Wallet className="w-4 h-4 mr-2" />
-                  {formatAddress(address || "")}
+                  Initialize Wallet
                 </Button>
-                <Button onClick={() => disconnect()} variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 rounded-none">
-                  <ArrowRightLeft className="w-4 h-4" />
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => open()} size="lg" className="rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all uppercase tracking-widest font-bold">
-                <Wallet className="w-4 h-4 mr-2" />
-                Initialize Wallet
-              </Button>
-            )}
+              )}
             </div>
           </div>
         </motion.div>
@@ -537,8 +537,8 @@ export default function TradePage() {
             >
               <Alert className="border-primary/50 bg-primary/5 rounded-none">
                 <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-primary" />
-                <AlertTitle className="text-primary font-bold uppercase tracking-wider text-xs">Auth Required</AlertTitle>
+                  <Info className="w-4 h-4 text-primary" />
+                  <AlertTitle className="text-primary font-bold uppercase tracking-wider text-xs">Auth Required</AlertTitle>
                 </div>
                 <AlertDescription className="text-primary/80 text-xs font-mono mt-1">
                   Connect wallet to access secure trading execution layer.
@@ -597,8 +597,8 @@ export default function TradePage() {
 
                 {/* Agent & Symbol Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="agent" className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Designated Agent</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="agent" className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Designated Agent</Label>
                     <Select
                       id="agent"
                       value={selectedAgent}
@@ -606,7 +606,7 @@ export default function TradePage() {
                         setSelectedAgent(e.target.value);
                         setTradeIntent(null);
                       }}
-                      className="bg-black border-white/20 rounded-none focus:border-primary text-sm font-mono h-12"
+                      className="w-full bg-black border-white/20 rounded-none focus:border-primary text-sm font-mono h-12 px-4"
                     >
                       <option value="">[ SELECT OPERATIVE ]</option>
                       {agents.map((agent) => (
@@ -617,8 +617,8 @@ export default function TradePage() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="symbol" className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Target Asset</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="symbol" className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Target Asset</Label>
                     <Select
                       id="symbol"
                       value={symbol}
@@ -626,7 +626,7 @@ export default function TradePage() {
                         setSymbol(e.target.value);
                         setTradeIntent(null);
                       }}
-                      className="bg-black border-white/20 rounded-none focus:border-primary text-sm font-mono h-12"
+                      className="w-full bg-black border-white/20 rounded-none focus:border-primary text-sm font-mono h-12 px-4"
                     >
                       <option value="BTC">BTC (WBTC) / USDC</option>
                     </Select>
@@ -634,8 +634,8 @@ export default function TradePage() {
                 </div>
 
                 {/* Side Selection - Segmented Control */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Strategy Mode</Label>
+                <div className="space-y-3">
+                  <Label className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Strategy Mode</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       onClick={() => {
@@ -667,8 +667,8 @@ export default function TradePage() {
                 </div>
 
                 {/* Size Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="size" className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                <div className="space-y-3">
+                  <Label htmlFor="size" className="text-xs uppercase font-bold text-muted-foreground tracking-wider">
                     Deployment Size {side === "buy" ? "(USDC)" : "(cbBTC)"}
                   </Label>
                   <div className="relative">
@@ -722,7 +722,7 @@ export default function TradePage() {
                       </div>
                     </div>
                   )}
-                  
+
                   <Button
                     onClick={handleGetSuggestion}
                     disabled={loading || !selectedAgent || !symbol || !isConnected}
@@ -781,19 +781,19 @@ export default function TradePage() {
                       <Network className="w-4 h-4" />
                       Execution Manifest
                     </h3>
-                    
+
                     {tradeIntent && (
                       <div className="space-y-2 bg-black border border-white/10 p-4 font-mono text-sm">
                         {tradeIntent.paymentRequestId && (
-                           <div className="flex justify-between items-center pb-2 border-b border-white/10 mb-2">
-                              <span className="text-muted-foreground text-[10px] uppercase">ID Reference</span>
-                              <span className="text-xs">{tradeIntent.paymentRequestId.slice(0, 8)}...{tradeIntent.paymentRequestId.slice(-4)}</span>
-                           </div>
+                          <div className="flex justify-between items-center pb-2 border-b border-white/10 mb-2">
+                            <span className="text-muted-foreground text-[10px] uppercase">ID Reference</span>
+                            <span className="text-xs">{tradeIntent.paymentRequestId.slice(0, 8)}...{tradeIntent.paymentRequestId.slice(-4)}</span>
+                          </div>
                         )}
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground text-[10px] uppercase">Trade Volume</span>
                           <span className="font-bold text-primary">
-                            {tradeIntent.side === "buy" 
+                            {tradeIntent.side === "buy"
                               ? `$${tradeIntent.size.toFixed(2)} USDC`
                               : `${tradeIntent.size.toFixed(6)} ${tradeIntent.symbol}`
                             }
@@ -901,8 +901,8 @@ export default function TradePage() {
             <Card className="h-full bg-black border border-white/10 rounded-none shadow-none flex flex-col">
               <CardHeader className="border-b border-white/10 pb-4">
                 <CardTitle className="flex items-center gap-2 font-mono uppercase tracking-widest text-xs font-bold">
-                   <Activity className="w-4 h-4 text-primary animate-pulse" />
-                   Live Network Feed
+                  <Activity className="w-4 h-4 text-primary animate-pulse" />
+                  Live Network Feed
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 flex-1 overflow-auto max-h-[600px] font-mono text-xs scrollbar-hide">
@@ -925,9 +925,8 @@ export default function TradePage() {
                             </span>
                             <span className="font-bold text-foreground">{trade.tradeIntent?.symbol}</span>
                             {trade.isOpen !== undefined && (
-                              <span className={`text-[10px] uppercase tracking-wider ${
-                                trade.isOpen ? 'text-blue-400' : 'text-muted-foreground'
-                              }`}>
+                              <span className={`text-[10px] uppercase tracking-wider ${trade.isOpen ? 'text-blue-400' : 'text-muted-foreground'
+                                }`}>
                                 [{trade.isOpen ? 'OPEN' : 'CLOSED'}]
                               </span>
                             )}
@@ -946,12 +945,12 @@ export default function TradePage() {
                           </div>
                           {trade.pnl && (
                             <div className="pt-2 mt-2 border-t border-white/5">
-                               <div className="flex justify-between items-center">
-                                  <span>PNL:</span>
-                                  <span className={trade.pnl.isProfit ? "text-green-500" : "text-red-500"}>
-                                     {trade.pnl.isProfit ? '+' : ''}{trade.pnl.value.toFixed(2)} ({trade.pnl.percentage.toFixed(2)}%)
-                                  </span>
-                               </div>
+                              <div className="flex justify-between items-center">
+                                <span>PNL:</span>
+                                <span className={trade.pnl.isProfit ? "text-green-500" : "text-red-500"}>
+                                  {trade.pnl.isProfit ? '+' : ''}{trade.pnl.value.toFixed(2)} ({trade.pnl.percentage.toFixed(2)}%)
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
