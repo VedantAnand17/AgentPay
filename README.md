@@ -1,394 +1,713 @@
 # AgentPay Relay
 
-Execute AI-powered spot trades on Uniswap with one-time x402 payments. No API keys. No custody.
+![AgentPay Banner](https://img.shields.io/badge/AgentPay-Relay-blue?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue?style=for-the-badge&logo=typescript)
 
-## Overview
+> **Execute AI-powered spot trades on Uniswap with one-time x402 payments. No API keys. No custody.**
 
-AgentPay Relay is a full-stack Web3 application that enables users to execute spot trades on Uniswap V4 (Base Sepolia) using a one-time x402 payment instead of providing API keys or custody.
+AgentPay Relay is a revolutionary Web3 application that enables autonomous AI agents and users to execute decentralized spot trades using a pay-per-trade model. Built on the x402 payment protocol, it eliminates traditional barriers like API keys, custody requirements, and complex authentication systems.
 
-### Flow
+---
 
-1. User configures a trade (agent, symbol, side, size, leverage) and connects wallet
-2. Backend creates a TradeIntent with payment configuration
-3. User clicks "Execute Trade" - frontend uses x402 client library
-4. x402 client automatically handles payment via wallet (shows payment confirmation UI)
-5. Backend uses x402 middleware to verify payment before executing
-6. Backend executes a spot swap on Uniswap V4 using an execution wallet
-7. Backend returns the swap tx hash + execution info
-8. UI shows a full execution receipt
+## 🌟 Key Features
 
-## Tech Stack
+### 🤖 AI Trading Agents
+- **Trend Follower**: Momentum-based strategy following market trends
+- **Breakout Sniper**: Captures breakouts from consolidation patterns  
+- **Mean Reversion**: Trades against extremes, betting on price normalization
 
-- **Runtime**: Bun
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Web3**: viem for Base Sepolia interaction
-- **Database**: SQLite (better-sqlite3) for MVP
-- **Payment**: x402 integrated using `x402-fetch` (frontend) and `x402-express` middleware pattern (backend, adapted for Next.js)
+### 💰 x402 Payment Protocol
+- **One-time payments**: Pay only when you trade
+- **No custody**: Funds remain in your wallet until execution
+- **Wallet-based**: No API keys or traditional authentication
+- **Atomic execution**: Payment verification coupled with trade execution
 
-## Environment Variables
+### 🔄 Uniswap V3 Integration
+- **Deep liquidity**: Direct access to Uniswap V3 pools on Base Sepolia
+- **Spot trading**: Buy/sell tokens instantly at market prices
+- **Multiple pairs**: Support for USDC/BTC and extensible to more pairs
+- **Slippage protection**: Configurable tolerance for price movements
 
-Create a `.env.local` file in the root directory with the following variables:
+### 🔐 Security & Privacy
+- **Non-custodial**: You control your private keys
+- **Permissionless**: No KYC or account creation
+- **Transparent**: All transactions on-chain and verifiable
+- **Secure payments**: Cryptographic verification via x402 facilitator
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Frontend Layer                           │
+│  • Next.js 14 with App Router                               │
+│  • React + TypeScript                                        │
+│  • Wagmi + Web3Modal (Wallet Connection)                    │
+│  • x402-fetch (Payment Handling)                            │
+│  • Framer Motion (Animations)                               │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                     Backend Layer                            │
+│  • Next.js API Routes                                        │
+│  • x402 Middleware (Payment Verification)                   │
+│  • Trading Agents (Strategy Execution)                      │
+│  • Uniswap V3 Integration (Swap Execution)                  │
+│  • SQLite Database (Trade History)                          │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                  Infrastructure Layer                        │
+│  • Base Sepolia L2 Network                                   │
+│  • Uniswap V3 Protocol                                       │
+│  • x402 Facilitator (Payment Settlement)                    │
+│  • Smart Contracts (ERC20 Tokens)                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Bun** (JavaScript runtime) - [Install Bun](https://bun.sh)
+- **Foundry** (for smart contracts) - [Install Foundry](https://book.getfoundry.sh/getting-started/installation)
+- **Base Sepolia ETH** - [Get from faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet)
+- **WalletConnect Project ID** - [Get from WalletConnect](https://cloud.walletconnect.com)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/vedantanand17/AgentPay.git
+cd AgentPay
+
+# Install dependencies
+bun install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your configuration
+```
+
+### Environment Configuration
+
+Create a `.env.local` file with the following variables:
 
 ```env
 # Base Sepolia Network
 BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
-UNISWAP_V4_POOL_MANAGER_ADDRESS=0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408  # Uniswap V4 PoolManager on Base Sepolia
-UNISWAP_V4_POSITION_MANAGER_ADDRESS=0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80  # Uniswap V4 PositionManager on Base Sepolia
-BASE_SEPOLIA_USDC_ADDRESS=0xB6c34A382a45F93682B03dCa9C48e3710e76809F  # USDC on Base Sepolia (optional, defaults to pool currency0)
-BASE_SEPOLIA_BTC_ADDRESS=0xb9B962177c15353cd6AA49E26c2b627b9CC35457  # cbBTC on Base Sepolia (optional, defaults to pool currency1)
-EXECUTION_PRIVATE_KEY=0x...  # Private key of execution wallet (must have funds for gas and tokens)
+UNISWAP_V3_FACTORY=0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24
+UNISWAP_V3_SWAP_ROUTER=0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4
+BASE_SEPOLIA_USDC_ADDRESS=0xB6c34A382a45F93682B03dCa9C48e3710e76809F
+BASE_SEPOLIA_BTC_ADDRESS=0xb9B962177c15353cd6AA49E26c2b627b9CC35457
 
-# x402 Integration (no API keys needed - wallet-based)
-# You can use either X402_PAYMENT_ADDRESS or ADDRESS (x402-Learn pattern)
-X402_PAYMENT_ADDRESS=0x...  # Address to receive payments (or use ADDRESS)
-ADDRESS=0x...  # Alternative: wallet address to receive payments
-X402_ASSET_ADDRESS=0xB6c34A382a45F93682B03dCa9C48e3710e76809F  # USDC on Base Sepolia (defaults to pool's MockUSDC, use 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 for mainnet)
-X402_NETWORK=base-sepolia  # Network for payments (base-sepolia or base)
-X402_ENV=testnet  # Set to "mainnet" to use Coinbase facilitator on mainnet
-FACILITATOR_URL=https://x402.org/facilitator  # Optional: custom facilitator URL
+# Execution Wallet (must have gas + tokens)
+EXECUTION_PRIVATE_KEY=0x...
 
-# WalletConnect (for Web3Modal wallet connection)
-# Get your project ID from https://cloud.walletconnect.com
+# x402 Payment Configuration
+X402_PAYMENT_ADDRESS=0x...  # Your payment recipient address
+X402_NETWORK=base-sepolia
+X402_ENV=testnet
+
+# WalletConnect
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id-here
 
 # Database (optional)
 DATABASE_PATH=./agentpay.db
-
-# Frontend (optional)
-NEXT_PUBLIC_CHAIN_ID=84532  # Base Sepolia chain ID
 ```
 
-## Installation
-
-1. Install dependencies using Bun:
-
-```bash
-bun install
-```
-
-2. Set up environment variables (see above)
-
-3. (Optional) Deploy your own Uniswap V3 pool - see [Deploying Contracts](#deploying-contracts) below
-
-4. Run the development server:
+### Run Development Server
 
 ```bash
 bun run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Deploying Contracts
+---
 
-The project includes Foundry contracts for deploying your own Uniswap V3 pool on Base Sepolia.
+## 📖 How It Works
 
-### Prerequisites
+### Trade Execution Flow
 
-- [Foundry](https://book.getfoundry.sh/getting-started/installation)
-- Base Sepolia ETH (get from [Base Sepolia Faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet))
-
-### Quick Deployment
-
-```bash
-# Navigate to contracts folder
-cd contracts
-
-# Install Foundry dependencies
-forge install OpenZeppelin/openzeppelin-contracts@v4.9.3
-forge install foundry-rs/forge-std
-
-# Create .env file
-cp .env.example .env
-# Edit .env with your private key
-
-# Run automated deployment (deploys tokens + creates pool)
-./script/Deploy.sh
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant x402
+    participant Uniswap
+    
+    User->>Frontend: 1. Configure Trade
+    Frontend->>Backend: 2. Create Payment Request
+    Backend-->>Frontend: 3. Return Payment Details
+    User->>Frontend: 4. Connect Wallet
+    User->>Frontend: 5. Execute Trade
+    Frontend->>x402: 6. Show Payment UI
+    User->>x402: 7. Approve Payment
+    x402->>Backend: 8. Verify Payment
+    Backend->>Uniswap: 9. Execute Swap
+    Uniswap-->>Backend: 10. Return Tx Hash
+    Backend-->>Frontend: 11. Execution Receipt
+    Frontend-->>User: 12. Display Result
 ```
 
-### Manual Deployment
+### Step-by-Step Process
 
-1. **Deploy Mock Tokens**:
-```bash
-forge script script/DeployTokens.s.sol:DeployTokens \
-  --rpc-url $BASE_SEPOLIA_RPC_URL \
-  --broadcast -vvvv
-```
+1. **Configure Trade**
+   - Select trading agent (Trend Follower, Breakout Sniper, Mean Reversion)
+   - Choose token symbol (BTC, ETH, SOL)
+   - Set trade side (Buy/Sell) and size
+   - Get AI agent suggestion (optional)
 
-2. **Update `.env`** with deployed token addresses
+2. **Create Payment Request**
+   - Backend creates `TradeIntent` with status "pending"
+   - Generates x402 payment configuration
+   - Returns payment amount and trade details
 
-3. **Deploy Uniswap V3 Pool**:
-```bash
-forge script script/DeployPool.s.sol:DeployPool \
-  --rpc-url $BASE_SEPOLIA_RPC_URL \
-  --broadcast -vvvv
-```
+3. **Connect Wallet**
+   - User connects via Web3Modal (MetaMask, Coinbase Wallet, WalletConnect)
+   - Wallet address used for receiving tokens
 
-### Uniswap V3 Addresses (Base Sepolia)
+4. **Execute Trade**
+   - User clicks "Execute Trade"
+   - x402-fetch detects payment requirement
+   - Wallet shows payment confirmation UI
+   - User approves payment transaction
 
-| Contract | Address |
-|----------|---------|
-| UniswapV3Factory | `0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24` |
-| SwapRouter02 | `0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4` |
-| NonfungiblePositionManager | `0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2` |
-| QuoterV2 | `0xC5290058841028F1614F3A6F0F5816cAd0df5E27` |
+5. **Payment Verification**
+   - x402 middleware verifies payment proof
+   - Facilitator confirms payment on-chain
+   - Trade intent status updated to "paid"
 
-After deployment, update your project's root `.env` file with the deployed addresses.
+6. **Swap Execution**
+   - Backend approves token spending
+   - Executes swap on Uniswap V3
+   - Tokens sent to user's wallet
+   - Transaction hash recorded
 
-## Project Structure
+7. **Completion**
+   - Executed trade saved to database
+   - Receipt displayed with tx hash and execution price
+   - Recent trades list updated
+
+---
+
+## 🎯 Use Cases
+
+### For AI Agents
+- **Autonomous trading**: Execute trades without human intervention
+- **Pay-per-use**: No subscription fees or upfront costs
+- **API-first design**: Clean endpoints with predictable responses
+- **Programmatic access**: Easy integration with agent frameworks
+
+### For Traders
+- **Privacy-focused**: No KYC or account creation
+- **Non-custodial**: Maintain full control of funds
+- **Strategy testing**: Experiment with different trading agents
+- **Low barrier**: Start trading with just a wallet
+
+### For Developers
+- **Open source**: Full codebase available for learning
+- **Extensible**: Add new agents, tokens, or features
+- **Modern stack**: Next.js, TypeScript, Wagmi, viem
+- **Well-documented**: Comprehensive guides and examples
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript 5.5
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Web3**: Wagmi, viem, Web3Modal
+- **State**: React hooks, TanStack Query
+
+### Backend
+- **Runtime**: Bun
+- **Framework**: Next.js API Routes
+- **Database**: SQLite (better-sqlite3)
+- **Payment**: x402 protocol (@coinbase/x402)
+- **Blockchain**: viem (Ethereum interactions)
+
+### Smart Contracts
+- **Framework**: Foundry
+- **Language**: Solidity 0.8.20
+- **Standards**: OpenZeppelin ERC20
+- **Protocol**: Uniswap V3
+
+### Infrastructure
+- **Network**: Base Sepolia (L2 testnet)
+- **DEX**: Uniswap V3
+- **Facilitator**: x402.org
+- **Deployment**: Vercel (recommended)
+
+---
+
+## 📁 Project Structure
 
 ```
 AgentPay/
-├── app/
-│   ├── api/
-│   │   ├── agents/
-│   │   │   ├── route.ts          # GET /api/agents
-│   │   │   └── suggest/
-│   │   │       └── route.ts      # POST /api/agents/suggest
-│   │   └── trades/
-│   │       ├── route.ts          # GET /api/trades
-│   │       ├── create-intent/
-│   │       │   └── route.ts      # POST /api/trades/create-intent
-│   │       └── execute/
-│   │           └── route.ts      # POST /api/trades/execute
-│   ├── trade/
-│   │   └── page.tsx              # Trade console UI
-│   ├── layout.tsx                # Root layout
-│   ├── page.tsx                  # Landing page
-│   └── globals.css               # Global styles
-├── contracts/                     # Foundry smart contracts
-│   ├── src/
-│   │   ├── MockERC20.sol         # Mock ERC20 tokens
-│   │   └── interfaces/           # Uniswap V3 interfaces
-│   ├── script/
-│   │   ├── DeployTokens.s.sol    # Deploy mock USDC/WBTC
-│   │   ├── DeployPool.s.sol      # Create Uniswap V3 pool
-│   │   ├── AddLiquidity.s.sol    # Add liquidity to pool
-│   │   └── Deploy.sh             # Automated deployment script
-│   ├── test/                     # Contract tests
-│   └── foundry.toml              # Foundry configuration
-├── lib/
-│   ├── agents.ts                 # Trading agent strategies
-│   ├── db.ts                     # SQLite database operations
-│   ├── uniswap.ts                # Uniswap V4 spot exchange interaction
-│   ├── uniswap-v3.ts             # Uniswap V3 spot exchange interaction
-│   ├── types.ts                  # TypeScript type definitions
-│   ├── x402.ts                   # x402 payment configuration
-│   └── x402-middleware.ts        # x402 middleware for Next.js API routes
-├── package.json
-├── tsconfig.json
-└── README.md
+├── app/                          # Next.js app directory
+│   ├── api/                      # API routes
+│   │   ├── agents/              # Agent endpoints
+│   │   │   ├── route.ts         # GET /api/agents
+│   │   │   └── suggest/         # POST /api/agents/suggest
+│   │   ├── balances/            # GET /api/balances
+│   │   ├── pools/               # Pool management
+│   │   └── trades/              # Trade endpoints
+│   │       ├── route.ts         # GET /api/trades
+│   │       ├── create-intent/   # POST /api/trades/create-intent
+│   │       └── execute/         # POST /api/trades/execute
+│   ├── trade/                   # Trade console page
+│   ├── layout.tsx               # Root layout
+│   ├── page.tsx                 # Landing page
+│   ├── providers.tsx            # Wagmi providers
+│   └── globals.css              # Global styles
+│
+├── components/                   # React components
+│   └── ui/                      # UI components
+│       ├── hero.tsx             # Hero section
+│       ├── navbar.tsx           # Navigation bar
+│       ├── feature-card.tsx     # Feature cards
+│       ├── how-it-works.tsx     # How it works section
+│       ├── portfolio-balance.tsx # Portfolio display
+│       └── ...                  # Other UI components
+│
+├── lib/                         # Core libraries
+│   ├── agents.ts                # Trading agent strategies
+│   ├── db.ts                    # SQLite database operations
+│   ├── types.ts                 # TypeScript type definitions
+│   ├── uniswap.ts               # Uniswap V4 integration
+│   ├── uniswap-v3.ts            # Uniswap V3 integration
+│   ├── wagmi-config.ts          # Wagmi configuration
+│   ├── x402.ts                  # x402 payment config
+│   └── x402-middleware.ts       # x402 middleware
+│
+├── contracts/                    # Smart contracts (Foundry)
+│   ├── src/                     # Contract source code
+│   │   ├── MockERC20.sol        # Mock ERC20 token
+│   │   └── interfaces/          # Uniswap interfaces
+│   ├── script/                  # Deployment scripts
+│   │   ├── DeployTokens.s.sol   # Deploy mock tokens
+│   │   ├── DeployPool.s.sol     # Create Uniswap pool
+│   │   ├── AddLiquidity.s.sol   # Add liquidity
+│   │   └── Deploy.sh            # Automated deployment
+│   ├── test/                    # Contract tests
+│   └── foundry.toml             # Foundry config
+│
+├── package.json                 # Dependencies
+├── tsconfig.json                # TypeScript config
+├── tailwind.config.ts           # Tailwind config
+├── next.config.js               # Next.js config
+├── README.md                    # Main documentation
+└── technicalDepth.md            # Technical deep dive
 ```
 
-## Core Modules
+---
 
-### Trading Agents (`lib/agents.ts`)
+## 🔌 API Reference
 
-Implements three rule-based trading strategies:
+### Agents
 
-- **Trend Follower**: Follows momentum and trends in the market
-- **Breakout Sniper**: Captures breakouts from consolidation patterns
-- **Mean Reversion**: Trades against extremes, betting on price returning to average
+#### GET `/api/agents`
+List all available trading agents.
 
-Each agent returns a deterministic suggestion with:
-- `symbol`: Token symbol to trade (e.g., WETH, BTC, ETH, SOL)
-- `side`: "buy" or "sell"
-- `size`: Between 0.01–0.05 (amount in USDC for buy, or token amount for sell)
-- `leverage`: Between 2–5 (kept for compatibility, not used in spot trades)
-- `reason`: Explanation of the suggestion
+**Response:**
+```json
+[
+  {
+    "id": "trend-follower",
+    "name": "Trend Follower",
+    "description": "Follows momentum and trends in the market"
+  }
+]
+```
 
-### x402 Integration (`lib/x402.ts` and `lib/x402-middleware.ts`)
+#### POST `/api/agents/suggest`
+Get trade suggestion from an agent.
 
-x402 integration uses wallet-based payments (no API keys required), based on the x402-Learn integration pattern:
-
-- **Frontend**: Uses `x402-fetch` library
-  - User connects wallet
-  - `x402Fetch()` automatically handles payments via wallet UI when making requests
-  - Detects 402 Payment Required responses and shows payment confirmation UI
-  - Payment is handled seamlessly in the background
-
-- **Backend**: Uses x402 middleware pattern (adapted for Next.js)
-  - `x402PaymentRequired()` middleware wraps API routes
-  - Payment is verified automatically before handler executes
-  - If payment not verified, returns 402 Payment Required with payment details
-  - Based on `x402-express` middleware pattern, adapted for Next.js Request/Response
-
-**Implementation Details**:
-- Uses `@coinbase/x402` for facilitator configuration
-- Supports both testnet (base-sepolia) and mainnet (base) via `X402_ENV` environment variable
-- Payment configuration matches x402-Learn pattern with price, network, and metadata
-- x402 shows wallet confirmation UI automatically when payment is required
-
-### Uniswap V4 Spot Exchange (`lib/uniswap.ts`)
-
-Interacts with Uniswap V4 PoolManager on Base Sepolia:
-
-- `executeUniswapSwap()`: Executes a spot token swap using the execution wallet
-  - For "buy": Swaps USDC → cbBTC
-  - For "sell": Swaps cbBTC → USDC
-- Automatically handles token approvals before swapping
-- Uses Uniswap V4 `swap` function on PoolManager with 0.3% fee tier and tick spacing 60
-- **Deployed Pool Configuration (Base Sepolia)**:
-  - PoolManager: `0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408`
-  - PositionManager: `0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80`
-  - Currency0: USDC (`0xB6c34A382a45F93682B03dCa9C48e3710e76809F`) - MockUSDC
-  - Currency1: cbBTC (`0xb9B962177c15353cd6AA49E26c2b627b9CC35457`) - MockCbBTC
-  - Fee: 3000 (0.3%)
-  - Tick Spacing: 60
-  - Initial Pool State: Initial Tick: 0, SqrtPriceX96: 79228162514264337593543950336
-  - Liquidity Position: Tick Lower: -887220, Tick Upper: 887220, Liquidity: 2500000000
-
-**Note**: 
-- Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas and the tokens being swapped
-- Token addresses are configured in `TOKEN_ADDRESSES` mapping (currently supports USDC and cbBTC)
-- BTC trades use cbBTC (Coinbase Wrapped Bitcoin) token address on Base Sepolia
-- **Important**: Only swaps between USDC and cbBTC are supported (the configured pool)
-- If a swap appears successful but tokens aren't received, check:
-  1. The transaction on BaseScan to verify it actually executed
-  2. That the Uniswap V4 pool has liquidity
-  3. Your wallet address matches the `userAddress` in the trade intent
-- Use `/api/balances?address=0x...&symbol=BTC` to check token balances
-- In production, implement proper slippage protection and price oracle integration
-
-### Database (`lib/db.ts`)
-
-SQLite database with two main tables:
-
-- `trade_intents`: Stores pending/paid/executed trade intents
-- `executed_trades`: Stores completed trades with swap tx hashes and execution prices
-
-## API Routes
-
-### GET `/api/agents`
-
-Returns list of available trading agents.
-
-### POST `/api/agents/suggest`
-
-Body: `{ agentId, symbol }`
-
-Returns agent suggestion with side, size, leverage, and reason.
-
-### POST `/api/trades/create-intent`
-
-Body: `{ userAddress, agentId, symbol, side, size, leverage }` (side: "buy" or "sell")
-
-Creates a trade intent and x402 payment request. Returns:
-- `tradeIntent`: Created intent with payment request ID
-- `paymentRequest`: x402 payment details
-
-### POST `/api/trades/execute`
-
-Body: `{ tradeIntentId }`
-
-Verifies payment, executes Uniswap spot swap, and creates executed trade record. Returns:
-- `executedTrade`: Trade execution details with swap tx hash and execution price
-- `tradeIntent`: Updated intent
-
-### GET `/api/trades`
-
-Returns list of executed trades with trade intent details.
-
-### GET `/api/balances?address=0x...&symbol=BTC`
-
-Returns token balance for a given address and symbol. Useful for verifying holdings after a trade.
-
-**Query Parameters**:
-- `address`: User wallet address (required)
-- `symbol`: Token symbol (e.g., "BTC", "WETH", "USDC") (required)
-
-**Response**:
+**Request:**
 ```json
 {
-  "address": "0x...",
+  "agentId": "trend-follower",
+  "symbol": "BTC"
+}
+```
+
+**Response:**
+```json
+{
+  "symbol": "BTC",
+  "side": "buy",
+  "size": 0.03,
+  "leverage": 1,
+  "reason": "Strong uptrend detected (2.45% momentum)"
+}
+```
+
+### Trades
+
+#### POST `/api/trades/create-intent`
+Create a payment request for a trade.
+
+**Request:**
+```json
+{
+  "userAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+  "agentId": "trend-follower",
+  "symbol": "BTC",
+  "side": "buy",
+  "size": 0.03,
+  "leverage": 1
+}
+```
+
+**Response:**
+```json
+{
+  "tradeIntent": {
+    "id": "intent_1735756800_a3f2",
+    "expectedPaymentAmount": "5.00",
+    "status": "pending",
+    ...
+  },
+  "paymentRequest": {
+    "paymentRequestId": "x402_1735756800_k9m2p",
+    "amount": "5.00",
+    "currency": "USD"
+  }
+}
+```
+
+#### POST `/api/trades/execute`
+Execute a trade after payment verification (requires x402 payment).
+
+**Request:**
+```json
+{
+  "tradeIntentId": "intent_1735756800_a3f2"
+}
+```
+
+**Response:**
+```json
+{
+  "executedTrade": {
+    "id": "trade_1735756850_b7k3",
+    "swapTxHash": "0xabc123...",
+    "executionPrice": 42150.75,
+    "status": "executed"
+  }
+}
+```
+
+#### GET `/api/trades`
+Get recent executed trades.
+
+**Response:**
+```json
+[
+  {
+    "id": "trade_123",
+    "swapTxHash": "0xabc...",
+    "executionPrice": 42000.50,
+    "timestamp": 1735756850000,
+    "tradeIntent": {
+      "symbol": "BTC",
+      "side": "buy",
+      "size": 0.03
+    }
+  }
+]
+```
+
+### Balances
+
+#### GET `/api/balances?address=0x...&symbol=BTC`
+Check token balance for an address.
+
+**Response:**
+```json
+{
+  "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
   "symbol": "BTC",
   "balance": "100000000",
   "formatted": "1.0"
 }
 ```
 
-Returns list of recent executed trades (limit: 50 by default).
+---
 
-## Frontend Pages
+## 🔧 Smart Contract Deployment
 
-### `/` (Landing Page)
+### Deploy Mock Tokens
 
-Simple landing page with title, description, and link to trade console.
+```bash
+cd contracts
 
-### `/trade` (Trade Console)
+# Install dependencies
+forge install
 
-Main trading interface with:
+# Deploy tokens
+forge script script/DeployTokens.s.sol:DeployTokens \
+  --rpc-url $BASE_SEPOLIA_RPC_URL \
+  --broadcast -vvvv
+```
 
-- **Left Panel**: Trade configuration form
-  - Wallet address input
-  - Agent selection
-  - Symbol selection (BTC, ETH, SOL)
-  - Side toggle (Buy/Sell)
-  - Size and leverage inputs
-  - "Get Agent Suggestion" button
-  - "Create Payment Request" button
-  - "Mark Payment Complete & Execute" button
+### Create Uniswap V3 Pool
 
-- **Right Panel**: Recent executions table
-  - Shows symbol, side, size, leverage, payment status, tx hash, and timestamp
+```bash
+# Update .env with token addresses
+# Then deploy pool
+forge script script/DeployPool.s.sol:DeployPool \
+  --rpc-url $BASE_SEPOLIA_RPC_URL \
+  --broadcast -vvvv
+```
 
-## Payment → Verification → Execution Pipeline
+### Automated Deployment
 
-1. **Create Intent**: User fills trade form and clicks "Create Payment Request"
-   - Backend creates `TradeIntent` with status "pending"
-   - Frontend displays payment amount and trade details
+```bash
+# One-command deployment
+./script/Deploy.sh
+```
 
-2. **Connect Wallet**: User connects their wallet
-   - Frontend uses wallet connector (e.g., wagmi, web3modal)
-   - `x402Client.setWallet(wallet)` configures x402 client
+This will:
+1. Deploy MockUSDC and MockWBTC
+2. Create Uniswap V3 pool
+3. Add initial liquidity
+4. Output all addresses for `.env` configuration
 
-3. **Execute Trade**: User clicks "Execute Trade"
-   - Frontend uses `x402Client.fetch("/api/trades/execute", ...)`
-   - x402 client automatically detects payment requirement
-   - Wallet UI shows payment confirmation (amount, token, resource)
-   - User approves payment in wallet
+---
 
-4. **Verify & Execute**: Backend receives request
-   - x402 middleware verifies payment from request headers
-   - If payment verified, handler executes:
-     - Calls `executeUniswapSwap()` to execute spot swap on Uniswap V4
-     - Handles token approvals automatically
-     - Creates `ExecutedTrade` record with swap tx hash and execution price
-   - If payment not verified, returns 402 Payment Required
+## 🧪 Testing
 
-5. **Display Result**: Frontend receives execution result
-   - Shows execution receipt with swap tx hash, execution price, etc.
-   - Refreshes recent trades list
+### Run Unit Tests
 
-## Development Notes
+```bash
+# Frontend tests
+bun test
 
-- **x402 Integration**: 
-  - Frontend: Uses `x402-fetch` for automatic payment handling (integrated from x402-Learn)
-  - Backend: Uses `x402-express` middleware pattern, adapted for Next.js API routes
-  - No API keys needed - x402 uses wallet-based payments
-  - Supports both testnet and mainnet via `X402_ENV` environment variable
-  - Integration follows the same pattern as x402-Learn project
+# Contract tests
+cd contracts
+forge test
+```
 
-- **Wallet Integration**: 
-  - Currently uses a mock wallet connector
-  - In production, integrate with wagmi, web3modal, or your preferred wallet connector
-  - x402 works with any wallet that supports standard signing methods
+### Run Integration Tests
 
-- **Uniswap V4 Integration**:
-  - Uses Uniswap V4 PoolManager for spot token swaps
-  - Token addresses are configured in `lib/uniswap.ts` - currently supports USDC/cbBTC pool
-  - Ensure `EXECUTION_PRIVATE_KEY` wallet has sufficient funds for gas and the tokens being swapped
-  - In production, implement proper slippage protection (currently set to 0 for MVP)
-  - Consider integrating price oracles for accurate execution price reporting
+```bash
+# Start local development server
+bun run dev
 
-- **Database**: 
-  - Database file (`agentpay.db`) is created automatically on first run
+# Run E2E tests
+bun run test:e2e
+```
 
-- **Agent Strategies**: 
-  - All agent strategies use mock price data. In production, integrate with real market data APIs
+### Manual Testing Checklist
 
-## License
+- [ ] Connect wallet (MetaMask, Coinbase Wallet)
+- [ ] Get agent suggestion
+- [ ] Create payment request
+- [ ] Execute trade with payment
+- [ ] Verify tokens received
+- [ ] Check transaction on BaseScan
+- [ ] View trade in recent executions
 
-MIT
+---
 
+## 🚀 Deployment
+
+### Deploy to Vercel
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+```
+
+### Environment Variables
+
+Set the following in Vercel dashboard:
+- `BASE_SEPOLIA_RPC_URL`
+- `EXECUTION_PRIVATE_KEY`
+- `X402_PAYMENT_ADDRESS`
+- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
+- All other `.env.local` variables
+
+### Production Checklist
+
+- [ ] Set `X402_ENV=mainnet` for production
+- [ ] Use Base mainnet RPC URL
+- [ ] Deploy production smart contracts
+- [ ] Configure mainnet Uniswap addresses
+- [ ] Set up monitoring and alerts
+- [ ] Enable error tracking (Sentry)
+- [ ] Configure analytics (Vercel Analytics)
+- [ ] Set up database backups
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how you can help:
+
+### Development Setup
+
+```bash
+# Fork the repository
+git clone https://github.com/YOUR_USERNAME/AgentPay.git
+cd AgentPay
+
+# Create a branch
+git checkout -b feature/your-feature-name
+
+# Make changes and commit
+git add .
+git commit -m "Add your feature"
+
+# Push and create PR
+git push origin feature/your-feature-name
+```
+
+### Contribution Guidelines
+
+- Follow TypeScript best practices
+- Write tests for new features
+- Update documentation
+- Follow existing code style
+- Keep commits atomic and descriptive
+
+### Areas for Contribution
+
+- **New trading agents**: Implement additional strategies
+- **Token support**: Add more trading pairs
+- **UI improvements**: Enhance user experience
+- **Testing**: Increase test coverage
+- **Documentation**: Improve guides and examples
+- **Bug fixes**: Report and fix issues
+
+---
+
+## 📊 Roadmap
+
+### Phase 1: MVP (Current)
+- [x] Basic trading agents
+- [x] x402 payment integration
+- [x] Uniswap V3 swaps
+- [x] Web3 wallet connection
+- [x] Trade history tracking
+
+### Phase 2: Enhanced Features
+- [ ] Advanced trading strategies (ML-based)
+- [ ] Limit orders and stop-loss
+- [ ] Multi-asset portfolio tracking
+- [ ] Real-time price feeds
+- [ ] Mobile responsive design
+
+### Phase 3: Production Ready
+- [ ] Mainnet deployment
+- [ ] Multi-chain support (Arbitrum, Optimism)
+- [ ] MEV protection
+- [ ] Advanced analytics dashboard
+- [ ] Third-party security audit
+
+### Phase 4: Ecosystem
+- [ ] Agent marketplace
+- [ ] Strategy backtesting
+- [ ] Social trading features
+- [ ] API for external integrations
+- [ ] Mobile app (React Native)
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Issue**: Swap fails with "insufficient liquidity"
+```
+Solution:
+1. Check pool has enough liquidity
+2. Increase slippage tolerance in lib/uniswap.ts
+3. Verify token addresses are correct
+```
+
+**Issue**: Payment verification fails
+```
+Solution:
+1. Ensure wallet is connected
+2. Check payment amount matches requirement
+3. Verify network (base-sepolia vs base)
+4. Check facilitator URL is accessible
+```
+
+**Issue**: Transaction reverts
+```
+Solution:
+1. Ensure execution wallet has gas
+2. Verify token approvals
+3. Check pool is initialized
+4. Review transaction on BaseScan
+```
+
+**Issue**: Database errors
+```
+Solution:
+1. Check file permissions on agentpay.db
+2. Delete database and restart (dev only)
+3. Verify SQLite is installed
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Uniswap**: For the DEX protocol
+- **Coinbase**: For x402 payment standard
+- **Base**: For the L2 network
+- **Wagmi**: For Web3 React hooks
+- **Next.js**: For the framework
+- **OpenZeppelin**: For smart contract standards
+
+---
+
+## 📞 Support
+
+- **GitHub Issues**: [Report bugs](https://github.com/vedantanand17/AgentPay/issues)
+- **Discussions**: [Ask questions](https://github.com/vedantanand17/AgentPay/discussions)
+- **Twitter**: [@vedantanand17](https://twitter.com/vedantanand17)
+- **Email**: vedantanand17@gmail.com
+
+---
+
+## 🌐 Links
+
+- **Live Demo**: [agentpay.vercel.app](https://agentpay.vercel.app)
+- **Documentation**: [Technical Deep Dive](./technicalDepth.md)
+- **GitHub**: [vedantanand17/AgentPay](https://github.com/vedantanand17/AgentPay)
+- **Base Sepolia Explorer**: [basescan.org/sepolia](https://sepolia.basescan.org)
+
+---
+
+<div align="center">
+
+**Built with ❤️ for the decentralized future**
+
+[⭐ Star on GitHub](https://github.com/vedantanand17/AgentPay) • [🐛 Report Bug](https://github.com/vedantanand17/AgentPay/issues) • [💡 Request Feature](https://github.com/vedantanand17/AgentPay/issues)
+
+</div>
