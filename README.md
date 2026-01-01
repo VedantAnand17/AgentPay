@@ -690,14 +690,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **GitHub Issues**: [Report bugs](https://github.com/vedantanand17/AgentPay/issues)
 - **Discussions**: [Ask questions](https://github.com/vedantanand17/AgentPay/discussions)
-- **Twitter**: [@vedantanand17](https://twitter.com/vedantanand17)
-- **Email**: vedantanand17@gmail.com
+- **Twitter**: [@vedantsx](https://twitter.com/vedantsx)
+- **Email**: vedantanand.in@gmail.com
 
 ---
 
 ## 🌐 Links
 
-- **Live Demo**: [agentpay.vercel.app](https://agentpay.vercel.app)
+- **Live Demo**: [agentpay.vedant-dev.com](https://agentpay.vedant-dev.com)
 - **Documentation**: [Technical Deep Dive](./technicalDepth.md)
 - **GitHub**: [vedantanand17/AgentPay](https://github.com/vedantanand17/AgentPay)
 - **Base Sepolia Explorer**: [basescan.org/sepolia](https://sepolia.basescan.org)
