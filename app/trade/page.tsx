@@ -22,6 +22,7 @@ import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PaymentCheckout } from "@/components/ui/payment-checkout";
+import { PortfolioBalance } from "@/components/ui/portfolio-balance";
 import { motion, AnimatePresence } from "framer-motion";
 import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, ArrowRight, TrendingUp, Loader2, Zap, ShieldCheck, Activity, Terminal, Lock, Key, Cpu, Radio, Network } from "lucide-react";
 
@@ -896,9 +897,12 @@ export default function TradePage() {
             </Card>
           </div>
 
-          {/* Right Column: Recent Executions */}
-          <div className="lg:col-span-5">
-            <Card className="h-full bg-black border border-white/10 rounded-none shadow-none flex flex-col">
+          {/* Right Column: Portfolio & Recent Executions */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Portfolio Balance */}
+            <PortfolioBalance address={address} isConnected={isConnected} />
+
+            <Card className="bg-black border border-white/10 rounded-none shadow-none flex flex-col">
               <CardHeader className="border-b border-white/10 pb-4">
                 <CardTitle className="flex items-center gap-2 font-mono uppercase tracking-widest text-xs font-bold">
                   <Activity className="w-4 h-4 text-primary animate-pulse" />
