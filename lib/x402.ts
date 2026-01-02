@@ -1,112 +1,76 @@
-// x402 payment integration module
-// Based on x402-Learn integration pattern
-import { TradeIntent, X402PaymentRequest } from "./types";
-import { facilitator } from "@coinbase/x402";
-
-// x402 configuration from environment variables
-const X402_PAYMENT_ADDRESS = (process.env.X402_PAYMENT_ADDRESS || process.env.ADDRESS) as `0x${string}`;
-const X402_NETWORK = process.env.X402_NETWORK || "base-sepolia";
-const useMainnetFacilitator = process.env.X402_ENV === "mainnet";
-const facilitatorUrl = process.env.FACILITATOR_URL || "https://x402.org/facilitator";
-
-// USDC addresses: Base Sepolia testnet vs Base mainnet
-// Note: For Base Sepolia, we use the deployed pool's MockUSDC address
-// This ensures consistency with the Uniswap V4 pool configuration
-const BASE_SEPOLIA_USDC = process.env.BASE_SEPOLIA_USDC_ADDRESS || "0xB6c34A382a45F93682B03dCa9C48e3710e76809F"; // MockUSDC from deployed pool
-const BASE_MAINNET_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-
-// Use appropriate USDC address based on network, or allow override via env var
-// X402_ASSET_ADDRESS env var takes precedence for flexibility
-const X402_ASSET_ADDRESS = process.env.X402_ASSET_ADDRESS || 
-  (useMainnetFacilitator || X402_NETWORK === "base" 
-    ? BASE_MAINNET_USDC 
-    : BASE_SEPOLIA_USDC);
-
-// Validate required environment variables
-if (!X402_PAYMENT_ADDRESS || X402_PAYMENT_ADDRESS === "0x0000000000000000000000000000000000000000") {
-  console.warn("Warning: X402_PAYMENT_ADDRESS or ADDRESS not set. x402 payments will not work.");
-}
-
-// Facilitator configuration (matches x402-Learn pattern)
-export const facilitatorConfig = useMainnetFacilitator
-  ? facilitator
-  : {
-      url: facilitatorUrl as `${string}://${string}`,
-    };
-
 /**
- * Get x402 payment configuration for a trade intent
+ * x402 Integration Module (V2)
  * 
- * Returns payment parameters in the format expected by x402 middleware
+ * Re-exports from x402-v2.ts for backward compatibility.
+ * This file maintains the existing API while using V2 under the hood.
  */
-export function getX402PaymentConfig(intent: TradeIntent): {
-  price: string; // Price in dollars (e.g., "$5.00")
-  network: string;
-  address: `0x${string}`;
-  config?: Record<string, unknown>;
-} {
-  return {
-    price: `$${intent.expectedPaymentAmount}`,
-    network: useMainnetFacilitator ? "base" : "base-sepolia",
-    address: X402_PAYMENT_ADDRESS,
-    config: {
-      description: `Execute ${intent.side} trade for ${intent.symbol}`,
-      inputSchema: {
-        type: "object",
-        properties: {
-          tradeIntentId: { type: "string", description: "Trade intent ID to execute" },
-        },
-        required: ["tradeIntentId"],
-      },
-      outputSchema: {
-        type: "object",
-        properties: {
-          executedTrade: { type: "object" },
-          tradeIntent: { type: "object" },
-        },
-      },
-      maxTimeoutSeconds: 90,
-      metadata: {
-        tradeIntentId: intent.id,
-        userAddress: intent.userAddress,
-        symbol: intent.symbol,
-        side: intent.side,
-        size: intent.size,
-        leverage: intent.leverage,
-      },
-    } as Record<string, unknown>,
-  };
-}
+
+// Re-export everything from V2
+export {
+  createAgentX402Client,
+  createBrowserX402Client,
+  getX402Network,
+  getX402PaymentAddress,
+  getX402PaymentConfig,
+  getX402ChainId,
+  X402_USDC_ADDRESS,
+  type X402PaymentConfig,
+} from "./x402-v2";
+
+// Re-export approval utilities
+export {
+  checkApprovalStatus,
+  requestApproval,
+  revokeApproval,
+  hasSufficientApproval,
+  createPaymentSession,
+  SPENDING_LIMIT_TIERS,
+  getRecommendedSpendingLimit,
+  type ApprovalStatus,
+  type SpendingLimitTier,
+  type PaymentSession,
+} from "./x402-approval";
+
+import type { TradeIntent, X402PaymentRequest } from "./types";
+import { getX402PaymentConfig as getConfig } from "./x402-v2";
 
 /**
  * Create payment request metadata (for tracking purposes)
+ * @deprecated Use getX402PaymentConfig instead for V2
  */
 export function createX402PaymentRequest(
   intent: TradeIntent
 ): X402PaymentRequest {
-  const config = getX402PaymentConfig(intent);
-  
+  const config = getConfig(intent);
+
   // Generate a payment request ID for tracking
   const paymentRequestId = `x402_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  
+
   return {
     paymentRequestId,
     amount: intent.expectedPaymentAmount,
     currency: "USD", // USDC is USD-pegged
-    metadata: config.config?.metadata as Record<string, any> || {},
+    metadata: config.metadata || {},
   };
 }
 
 /**
  * Get payment address
+ * @deprecated Use getX402PaymentAddress from x402-v2 instead
  */
 export function getPaymentAddress(): `0x${string}` {
-  return X402_PAYMENT_ADDRESS;
+  const { getX402PaymentAddress } = require("./x402-v2");
+  return getX402PaymentAddress();
 }
 
 /**
  * Get network
+ * @deprecated Use getX402Network from x402-v2 instead
  */
 export function getNetwork(): string {
-  return useMainnetFacilitator ? "base" : "base-sepolia";
+  const { getX402Network } = require("./x402-v2");
+  return getX402Network();
 }
+
+// Note: facilitatorConfig is no longer exported as V2 handles facilitator configuration differently
+// through the x402Server and registerExactEvmScheme functions

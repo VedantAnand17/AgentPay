@@ -1,6 +1,7 @@
 "use client";
 
-// Trade Console page with wagmi and x402-fetch integration
+// Trade Console page with wagmi and x402 V2 integration
+// Supports smart contract approvals for automatic payments
 
 // Extend Window interface to include ethereum provider
 declare global {
@@ -8,12 +9,14 @@ declare global {
     ethereum?: any;
   }
 }
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAccount, useWalletClient, useDisconnect, useSwitchChain, useChainId } from "wagmi";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
 import { createWalletClient, custom, http } from "viem";
 import { baseSepolia } from "viem/chains";
-import { wrapFetchWithPayment } from "x402-fetch";
+import { wrapFetchWithPayment } from "@x402/fetch";
+import { x402Client, x402HTTPClient } from "@x402/core/client";
+import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { Agent, TradeIntent, ExecutedTrade } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +26,15 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PaymentCheckout } from "@/components/ui/payment-checkout";
 import { PortfolioBalance } from "@/components/ui/portfolio-balance";
+import { SpendingLimitApproval } from "@/components/ui/spending-limit-approval";
 import { motion, AnimatePresence } from "framer-motion";
-import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, ArrowRight, TrendingUp, Loader2, Zap, ShieldCheck, Activity, Terminal, Lock, Key, Cpu, Radio, Network } from "lucide-react";
+import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, ArrowRight, TrendingUp, Loader2, Zap, ShieldCheck, Activity, Terminal, Lock, Key, Cpu, Radio, Network, Unlock } from "lucide-react";
+import {
+  checkApprovalStatus,
+  requestApproval,
+  revokeApproval,
+  type SpendingLimitTier,
+} from "@/lib/x402-approval";
 
 export default function TradePage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -45,6 +55,21 @@ export default function TradePage() {
   const [pendingConsultancyRequest, setPendingConsultancyRequest] = useState<{ url: string; options: RequestInit } | null>(null);
   const [isConsultancyPayment, setIsConsultancyPayment] = useState(false);
 
+  // x402 V2 spending limit approval state
+  // UI-specific type that matches what SpendingLimitApproval component expects
+  interface UIApprovalStatus {
+    isApproved: boolean;
+    currentAllowance: string;
+    formattedAllowance: string;
+    formattedBalance: string;
+    hasSufficientBalance: boolean;
+    tokenSymbol: string;
+  }
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalStatus, setApprovalStatus] = useState<UIApprovalStatus | null>(null);
+  const [isCheckingApproval, setIsCheckingApproval] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+
   // Wagmi hooks
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
@@ -53,39 +78,103 @@ export default function TradePage() {
   const { switchChain } = useSwitchChain();
   const chainId = useChainId();
 
-  // Create x402-fetch wrapper with wallet client
-  const fetchWithPayment = useMemo(() => {
+  // Check approval status when address changes
+  const refreshApprovalStatus = useCallback(async () => {
+    if (!address) {
+      setApprovalStatus(null);
+      return;
+    }
+    setIsCheckingApproval(true);
+    setApprovalError(null);
+    try {
+      const status = await checkApprovalStatus(address as `0x${string}`);
+      setApprovalStatus({
+        isApproved: status.isApproved,
+        currentAllowance: status.formattedAllowance,
+        formattedAllowance: status.formattedAllowance,
+        formattedBalance: status.formattedBalance,
+        hasSufficientBalance: status.hasSufficientBalance,
+        tokenSymbol: status.tokenSymbol,
+      });
+    } catch (err: any) {
+      console.error("Failed to check approval status:", err);
+      setApprovalError(err.message || "Failed to check approval status");
+      // Set default status on error
+      setApprovalStatus({
+        isApproved: false,
+        currentAllowance: "0",
+        formattedAllowance: "0.00",
+        formattedBalance: "0.00",
+        hasSufficientBalance: false,
+        tokenSymbol: "USDC",
+      });
+    } finally {
+      setIsCheckingApproval(false);
+    }
+  }, [address]);
+
+  useEffect(() => {
+    refreshApprovalStatus();
+  }, [refreshApprovalStatus]);
+
+  // Create x402 V2 client with wallet signer
+  const { fetchWithPayment, x402ClientInstance } = useMemo(() => {
     if (!walletClient || !isConnected || !walletClient.account) {
       console.warn("Wallet not connected, x402-fetch will not handle payments");
-      return fetch; // Fallback to regular fetch if wallet not connected
+      return { fetchWithPayment: fetch, x402ClientInstance: null };
     }
 
     // Ensure we're on the correct chain before initializing x402-fetch
     if (chainId !== baseSepolia.id) {
       console.warn(`Wallet is on chain ${chainId}, but Base Sepolia (${baseSepolia.id}) is required`);
-      return fetch; // Fallback to regular fetch if on wrong chain
+      return { fetchWithPayment: fetch, x402ClientInstance: null };
     }
 
-    // x402-fetch expects a wallet client that implements the x402 wallet interface
-    // The walletClient from wagmi should work directly, but we may need to adapt it
-    // For now, create a compatible wallet client
     try {
-      // Wrap fetch with x402 payment handling
-      // maxValue: 0.001 USD = 1,000 base units (6 decimals for USDC)
-      // Setting to 10,000,000 (10 USDC) to allow for the payment
-      const maxValue = BigInt(10_000_000); // 10 USDC in base units
-      console.log("Initializing x402-fetch with wallet client:", {
+      // Create x402 V2 client
+      const client = new x402Client();
+
+      // Register EVM exact payment scheme with wallet account as signer
+      registerExactEvmScheme(client, {
+        signer: walletClient.account as any
+      });
+
+      console.log("Initialized x402 V2 client:", {
         account: walletClient.account?.address,
         chain: walletClient.chain?.name,
         chainId: chainId,
-        maxValue: maxValue.toString(),
+        version: "V2",
       });
-      return wrapFetchWithPayment(fetch, walletClient as any, maxValue);
+
+      // Wrap fetch with automatic payment handling
+      const wrappedFetch = wrapFetchWithPayment(fetch, client);
+
+      return { fetchWithPayment: wrappedFetch, x402ClientInstance: client };
     } catch (err) {
-      console.error("Failed to initialize x402-fetch:", err);
-      return fetch; // Fallback to regular fetch on error
+      console.error("Failed to initialize x402 V2 client:", err);
+      return { fetchWithPayment: fetch, x402ClientInstance: null };
     }
   }, [walletClient, isConnected, chainId]);
+
+  // Handle spending limit approval
+  const handleRequestApproval = async (limit: SpendingLimitTier): Promise<{ txHash: string; approvedAmount: string }> => {
+    if (!walletClient) throw new Error("Wallet not connected");
+    const result = await requestApproval(walletClient, limit);
+    await refreshApprovalStatus();
+    return result;
+  };
+
+  const handleRevokeApproval = async (): Promise<{ txHash: string }> => {
+    if (!walletClient) throw new Error("Wallet not connected");
+    const result = await revokeApproval(walletClient);
+    await refreshApprovalStatus();
+    return result;
+  };
+
+  const handleApprovalComplete = (txHash: string, limit: string) => {
+    console.log("Approval complete:", { txHash, limit });
+    // Modal will close itself after showing success
+  };
 
   // Load agents on mount
   useEffect(() => {
@@ -320,8 +409,19 @@ export default function TradePage() {
         }
       }
 
+      // Check if user has pre-approved spending limit
+      if (address) {
+        await refreshApprovalStatus();
+
+        // If user has sufficient approval, payment should be automatic
+        if (approvalStatus?.isApproved && parseFloat(approvalStatus.formattedAllowance || "0") >= 5) {
+          console.log("User has pre-approved spending limit, proceeding with automatic payment");
+        } else {
+          console.log("User needs to sign payment (no pre-approval or insufficient allowance)");
+        }
+      }
+
       // Create a fresh wallet client on the correct chain using the injected provider
-      // This uses window.ethereum (MetaMask/injected wallet) for signing, not the RPC endpoint
       if (typeof window === "undefined" || !window.ethereum) {
         throw new Error("No wallet provider found. Please install MetaMask or another wallet.");
       }
@@ -332,19 +432,25 @@ export default function TradePage() {
         transport: custom(window.ethereum),
       });
 
-      console.log("Using fresh wallet client for payment:", {
+      console.log("Using x402 V2 client for payment:", {
         account: freshWalletClient.account?.address,
         chain: freshWalletClient.chain?.name,
         chainId: freshWalletClient.chain?.id,
+        version: "V2",
+        hasApproval: approvalStatus?.isApproved,
       });
 
-      // Create a fresh x402-fetch wrapper with the correct chain
-      const maxValue = BigInt(10_000_000); // 10 USDC in base units
-      const freshFetchWithPayment = wrapFetchWithPayment(fetch, freshWalletClient as any, maxValue);
+      // Create a fresh x402 V2 client
+      const freshClient = new x402Client();
+      registerExactEvmScheme(freshClient, {
+        signer: freshWalletClient.account as any
+      });
 
-      // Use the fresh x402-fetch to handle the payment
-      // This will create the payment signature and retry the request
-      // MetaMask will pop up for signature approval (this is normal for EIP-712 signatures)
+      // Create x402-fetch wrapper - with pre-approval, this won't require signature popup
+      const freshFetchWithPayment = wrapFetchWithPayment(fetch, freshClient);
+
+      // Use the x402-fetch to handle the payment
+      // With smart contract pre-approval, no MetaMask popup required!
       const resWithPayment = await freshFetchWithPayment(requestToProcess.url, requestToProcess.options);
 
       if (!resWithPayment.ok) {
@@ -375,6 +481,9 @@ export default function TradePage() {
         setPaymentRequirements(null);
         setShowPaymentModal(false);
       }
+
+      // Refresh approval status after payment (allowance will decrease)
+      await refreshApprovalStatus();
     } catch (err: any) {
       console.error("Payment error:", err);
       throw err; // Re-throw to let PaymentCheckout handle it
@@ -496,6 +605,30 @@ export default function TradePage() {
             <div className="flex gap-3">
               {isConnected ? (
                 <>
+                  {/* Spending Limit Status */}
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => setShowApprovalModal(true)}
+                    className={`bg-black border px-3 py-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider transition-all hover:border-primary/50 ${approvalStatus?.isApproved
+                      ? 'border-green-500/30 text-green-400'
+                      : 'border-amber-500/30 text-amber-400'
+                      }`}
+                  >
+                    {approvalStatus?.isApproved ? (
+                      <>
+                        <Unlock className="w-3 h-3" />
+                        <span className="hidden sm:inline">Auto-Pay:</span>
+                        <span className="font-mono">${approvalStatus.formattedAllowance}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-3 h-3" />
+                        <span className="hidden sm:inline">Set Limit</span>
+                      </>
+                    )}
+                  </motion.button>
+
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -1005,6 +1138,19 @@ export default function TradePage() {
           size: tradeIntent.size,
           leverage: tradeIntent.leverage,
         } : undefined)}
+      />
+
+      {/* Spending Limit Approval Modal */}
+      <SpendingLimitApproval
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        onApprovalComplete={handleApprovalComplete}
+        approvalStatus={approvalStatus}
+        onRequestApproval={handleRequestApproval}
+        onRevokeApproval={handleRevokeApproval}
+        isLoading={isCheckingApproval}
+        error={approvalError || undefined}
+        chainId={chainId}
       />
     </div>
   );

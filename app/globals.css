@@ -1,207 +1,338 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    /* TERMINAL MODE - DEFAULT */
-    --background: 240 10% 3.9%;
-    /* #09090b */
-    --foreground: 0 0% 98%;
+/* CSS Variable Definitions for Theme */
+:root {
+  /* Terminal Mode Colors */
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
 
-    --primary: 142 76% 36%;
-    /* Neon Greenish */
-    --primary-foreground: 355.7 100% 97.3%;
+  --primary: 142 76% 36%;
+  --primary-foreground: 355.7 100% 97.3%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142 76% 36%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 142 76% 36%;
 
-    --radius: 0rem;
+  --radius: 0rem;
 
-    --gradient-hero: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
-    --gradient-subtle: radial-gradient(circle at 50% 0%, rgba(34, 197, 94, 0.1), transparent 70%);
+  /* TailwindCSS v4 theme colors */
+  --color-background: hsl(240 10% 3.9%);
+  --color-foreground: hsl(0 0% 98%);
+  --color-card: hsl(240 10% 3.9%);
+  --color-card-foreground: hsl(0 0% 98%);
+  --color-popover: hsl(240 10% 3.9%);
+  --color-popover-foreground: hsl(0 0% 98%);
+  --color-primary: hsl(142 76% 36%);
+  --color-primary-foreground: hsl(355.7 100% 97.3%);
+  --color-secondary: hsl(240 3.7% 15.9%);
+  --color-secondary-foreground: hsl(0 0% 98%);
+  --color-muted: hsl(240 3.7% 15.9%);
+  --color-muted-foreground: hsl(240 5% 64.9%);
+  --color-accent: hsl(240 3.7% 15.9%);
+  --color-accent-foreground: hsl(0 0% 98%);
+  --color-destructive: hsl(0 62.8% 30.6%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-border: hsl(240 3.7% 15.9%);
+  --color-input: hsl(240 3.7% 15.9%);
+  --color-ring: hsl(142 76% 36%);
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+
+  --card: 240 10% 4%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 142 70% 50%;
+  --primary-foreground: 144 100% 10%;
+
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 142 70% 50%;
+
+  /* TailwindCSS v4 theme colors - dark mode */
+  --color-primary: hsl(142 70% 50%);
+  --color-primary-foreground: hsl(144 100% 10%);
+  --color-ring: hsl(142 70% 50%);
+}
+
+/* Base Styles */
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+/* Utility Classes */
+.text-balance {
+  text-wrap: balance;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.glass {
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card {
+  background-color: hsl(var(--card) / 0.4);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s;
+}
+
+.glass-card:hover {
+  border-color: rgba(34, 197, 94, 0.5);
+  background-color: hsl(var(--card) / 0.6);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+}
+
+.scanlines {
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0) 50%,
+      rgba(0, 0, 0, 0.2) 50%,
+      rgba(0, 0, 0, 0.2));
+  background-size: 100% 4px;
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+}
+
+.bg-grid-small-white {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+.bg-gradient-hero-text {
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, #4ade80, #10b981, #16a34a);
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
+
+.terminal-cursor::after {
+  content: "▋";
+  animation: blink 1s step-end infinite;
+  color: #22c55e;
+  margin-left: 0.25rem;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
   }
 
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-
-    --card: 240 10% 4%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 142 70% 50%;
-    /* Neon Green */
-    --primary-foreground: 144 100% 10%;
-
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142 70% 50%;
-
-    --gradient-hero: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
-    --gradient-subtle: radial-gradient(circle at 50% 0%, rgba(34, 197, 94, 0.15), transparent 70%);
+  50% {
+    opacity: 0;
   }
 }
 
-@layer base {
-  html {
-    scroll-behavior: smooth;
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
   }
 
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground antialiased selection:bg-green-500/30 selection:text-green-500 font-mono;
-    font-feature-settings: "rlig" 1, "calt" 1;
+  50% {
+    transform: translateY(-10px);
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+@keyframes pulse-subtle {
+
+  0%,
+  100% {
+    opacity: 1;
   }
 
-  /* Hide scrollbar while keeping scroll functionality */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    /* IE and Edge */
-    scrollbar-width: none;
-    /* Firefox */
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
   }
 
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-    /* Chrome, Safari, Opera */
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    opacity: 1;
   }
 
-  .glass {
-    @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-xl;
+  50% {
+    opacity: 0.5;
   }
+}
 
-  .glass-card {
-    @apply bg-card/40 backdrop-blur-sm border border-white/10 shadow-none transition-all duration-300 hover:border-green-500/50 hover:bg-card/60;
-  }
+/* Green Primary Color Overrides */
+.bg-primary {
+  background-color: hsl(var(--primary)) !important;
+}
 
-  .glass-card:hover {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
-  }
+.text-primary {
+  color: hsl(var(--primary)) !important;
+}
 
-  /* Scanline effect */
-  .scanlines {
-    background: linear-gradient(to bottom,
-        rgba(255, 255, 255, 0),
-        rgba(255, 255, 255, 0) 50%,
-        rgba(0, 0, 0, 0.2) 50%,
-        rgba(0, 0, 0, 0.2));
-    background-size: 100% 4px;
-    position: absolute;
-    pointer-events: none;
-    z-index: 10;
-    width: 100%;
-    height: 100%;
-    inset: 0;
-  }
+.border-primary {
+  border-color: hsl(var(--primary)) !important;
+}
 
-  .bg-grid-small-white {
-    background-size: 40px 40px;
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  }
+.ring-primary {
+  --tw-ring-color: hsl(var(--primary)) !important;
+}
 
-  .bg-gradient-hero-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-emerald-500 to-green-600;
-  }
+.hover\:bg-primary:hover {
+  background-color: hsl(var(--primary)) !important;
+}
 
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
+.hover\:text-primary:hover {
+  color: hsl(var(--primary)) !important;
+}
 
-  .animate-pulse-subtle {
-    animation: pulse-subtle 4s ease-in-out infinite;
-  }
+/* Background/Foreground for shadcn components */
+.bg-background {
+  background-color: hsl(var(--background)) !important;
+}
 
-  .terminal-cursor::after {
-    content: "▋";
-    animation: blink 1s step-end infinite;
-    @apply text-green-500 ml-1;
-  }
+.text-foreground {
+  color: hsl(var(--foreground)) !important;
+}
 
-  @keyframes blink {
+.bg-card {
+  background-color: hsl(var(--card)) !important;
+}
 
-    0%,
-    100% {
-      opacity: 1;
-    }
+.text-card-foreground {
+  color: hsl(var(--card-foreground)) !important;
+}
 
-    50% {
-      opacity: 0;
-    }
-  }
+.bg-muted {
+  background-color: hsl(var(--muted)) !important;
+}
 
-  /* Slow spin animation for loading indicators */
-  .animate-spin-slow {
-    animation: spin-slow 3s linear infinite;
-  }
+.text-muted-foreground {
+  color: hsl(var(--muted-foreground)) !important;
+}
 
-  @keyframes spin-slow {
-    from {
-      transform: rotate(0deg);
-    }
+.bg-accent {
+  background-color: hsl(var(--accent)) !important;
+}
 
-    to {
-      transform: rotate(360deg);
-    }
-  }
+.text-accent-foreground {
+  color: hsl(var(--accent-foreground)) !important;
+}
 
-  /* Slow pulse animation */
-  .animate-pulse-slow {
-    animation: pulse-slow 3s ease-in-out infinite;
-  }
+.bg-secondary {
+  background-color: hsl(var(--secondary)) !important;
+}
 
-  @keyframes pulse-slow {
+.text-secondary-foreground {
+  color: hsl(var(--secondary-foreground)) !important;
+}
 
-    0%,
-    100% {
-      opacity: 1;
-    }
+.bg-destructive {
+  background-color: hsl(var(--destructive)) !important;
+}
 
-    50% {
-      opacity: 0.5;
-    }
-  }
+.text-destructive {
+  color: hsl(var(--destructive)) !important;
+}
+
+.border-border {
+  border-color: hsl(var(--border)) !important;
+}
+
+.border-input {
+  border-color: hsl(var(--input)) !important;
 }

@@ -3,7 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { executeAgent } from "@/lib/agents";
 import { x402PaymentRequired } from "@/lib/x402-middleware";
 import { getPaymentAddress, getNetwork } from "@/lib/x402";
-import type { PaymentPayload } from "x402/types";
+
+// Define PaymentPayload type locally (V2 compatible)
+interface PaymentPayload {
+  id?: string;
+  raw?: string;
+  [key: string]: unknown;
+}
 
 // Consultancy fee: $0.10 USD (100,000 base units for USDC with 6 decimals)
 const CONSULTANCY_FEE = "$0.10";
@@ -45,10 +51,12 @@ export async function POST(request: NextRequest) {
   const handler = x402PaymentRequired(
     {
       price: CONSULTANCY_FEE,
-      network: getNetwork(),
-      address: getPaymentAddress(),
-      config: {
-        description: "AI Trading Consultancy - Get expert trading recommendation from AI agent",
+      network: getNetwork() as any,
+      payTo: getPaymentAddress(),
+      description: "AI Trading Consultancy - Get expert trading recommendation from AI agent",
+      maxTimeoutSeconds: 60,
+      metadata: {
+        service: "ai-consultancy",
         inputSchema: {
           type: "object",
           properties: {
@@ -68,10 +76,6 @@ export async function POST(request: NextRequest) {
             paymentId: { type: "string" },
           },
         },
-        maxTimeoutSeconds: 60,
-        metadata: {
-          service: "ai-consultancy",
-        },
       },
     },
     suggestHandler
@@ -79,23 +83,3 @@ export async function POST(request: NextRequest) {
 
   return handler(request);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
