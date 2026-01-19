@@ -88,7 +88,7 @@ function createClientWithRpc(rpcUrl: string) {
  * Execute an RPC call with automatic fallback to alternative RPCs
  */
 async function withRpcFallback<T>(
-  operation: (client: ReturnType<typeof createPublicClient>) => Promise<T>,
+  operation: (client: any) => Promise<T>,
   operationName: string = "RPC operation"
 ): Promise<T> {
   const rpcsToTry = getRpcUrls();
