@@ -11,7 +11,17 @@ import {
 import { baseSepolia } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 
+// Primary RPC URL from environment
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org";
+
+// Fallback RPC URLs for Base Sepolia (tried in order if primary fails)
+const BASE_SEPOLIA_RPC_FALLBACKS = [
+  "https://sepolia.base.org",
+  "https://base-sepolia.public.blastapi.io",
+  "https://base-sepolia-rpc.publicnode.com",
+  "https://base-sepolia.blockpi.network/v1/rpc/public",
+];
+
 const EXECUTION_PRIVATE_KEY = process.env.EXECUTION_PRIVATE_KEY || "";
 
 // Uniswap V3 contract addresses on Base Sepolia (Official)
@@ -53,6 +63,50 @@ const TOKEN_ADDRESSES: Record<string, TokenConfig> = {
     decimals: 18,
   },
 };
+
+/**
+ * Get all RPC URLs to try (primary first, then fallbacks)
+ */
+function getRpcUrls(): string[] {
+  return [BASE_SEPOLIA_RPC_URL, ...BASE_SEPOLIA_RPC_FALLBACKS.filter(rpc => rpc !== BASE_SEPOLIA_RPC_URL)];
+}
+
+/**
+ * Create a public client with the specified RPC URL
+ */
+function createClientWithRpc(rpcUrl: string) {
+  return createPublicClient({
+    chain: baseSepolia,
+    transport: http(rpcUrl, {
+      timeout: 10000, // 10 second timeout
+      retryCount: 1,
+    }),
+  });
+}
+
+/**
+ * Execute an RPC call with automatic fallback to alternative RPCs
+ */
+async function withRpcFallback<T>(
+  operation: (client: ReturnType<typeof createPublicClient>) => Promise<T>,
+  operationName: string = "RPC operation"
+): Promise<T> {
+  const rpcsToTry = getRpcUrls();
+  let lastError: Error | null = null;
+
+  for (const rpcUrl of rpcsToTry) {
+    try {
+      const client = createClientWithRpc(rpcUrl);
+      return await operation(client);
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`RPC ${rpcUrl} failed for ${operationName}:`, error.message);
+      // Continue to next RPC
+    }
+  }
+
+  throw new Error(`${operationName} failed after trying ${rpcsToTry.length} RPCs: ${lastError?.message || "Unknown error"}`);
+}
 
 // ERC20 ABI
 const ERC20_ABI = [
@@ -490,31 +544,28 @@ export async function executeUniswapV3Swap(args: {
 }
 
 /**
- * Check if a pool exists for the given token pair
+ * Check if a pool exists for the given token pair (with RPC fallback)
  */
 export async function checkPoolExists(
   tokenA: `0x${string}`,
   tokenB: `0x${string}`,
   fee: number = POOL_FEE
 ): Promise<`0x${string}` | null> {
-  const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http(BASE_SEPOLIA_RPC_URL),
-  });
-
   try {
-    const poolAddress = await publicClient.readContract({
-      address: UNISWAP_V3_FACTORY,
-      abi: FACTORY_ABI,
-      functionName: "getPool",
-      args: [tokenA, tokenB, fee],
-    });
+    return await withRpcFallback(async (publicClient) => {
+      const poolAddress = await publicClient.readContract({
+        address: UNISWAP_V3_FACTORY,
+        abi: FACTORY_ABI,
+        functionName: "getPool",
+        args: [tokenA, tokenB, fee],
+      });
 
-    if (poolAddress === "0x0000000000000000000000000000000000000000") {
-      return null;
-    }
+      if (poolAddress === "0x0000000000000000000000000000000000000000") {
+        return null;
+      }
 
-    return poolAddress as `0x${string}`;
+      return poolAddress as `0x${string}`;
+    }, "checkPoolExists");
   } catch (error) {
     console.error("Error checking pool:", error);
     return null;
@@ -522,7 +573,7 @@ export async function checkPoolExists(
 }
 
 /**
- * Get pool liquidity information
+ * Get pool liquidity information with RPC fallback
  */
 export async function getPoolInfo(): Promise<{
   poolAddress: string;
@@ -538,52 +589,49 @@ export async function getPoolInfo(): Promise<{
     return null;
   }
 
-  const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http(BASE_SEPOLIA_RPC_URL),
-  });
-
   try {
-    const [slot0, liquidity, token0, token1, fee] = await Promise.all([
-      publicClient.readContract({
-        address: POOL_ADDRESS,
-        abi: POOL_ABI,
-        functionName: "slot0",
-      }),
-      publicClient.readContract({
-        address: POOL_ADDRESS,
-        abi: POOL_ABI,
-        functionName: "liquidity",
-      }),
-      publicClient.readContract({
-        address: POOL_ADDRESS,
-        abi: POOL_ABI,
-        functionName: "token0",
-      }),
-      publicClient.readContract({
-        address: POOL_ADDRESS,
-        abi: POOL_ABI,
-        functionName: "token1",
-      }),
-      publicClient.readContract({
-        address: POOL_ADDRESS,
-        abi: POOL_ABI,
-        functionName: "fee",
-      }),
-    ]);
+    return await withRpcFallback(async (publicClient) => {
+      const [slot0, liquidity, token0, token1, fee] = await Promise.all([
+        publicClient.readContract({
+          address: POOL_ADDRESS,
+          abi: POOL_ABI,
+          functionName: "slot0",
+        }),
+        publicClient.readContract({
+          address: POOL_ADDRESS,
+          abi: POOL_ABI,
+          functionName: "liquidity",
+        }),
+        publicClient.readContract({
+          address: POOL_ADDRESS,
+          abi: POOL_ABI,
+          functionName: "token0",
+        }),
+        publicClient.readContract({
+          address: POOL_ADDRESS,
+          abi: POOL_ABI,
+          functionName: "token1",
+        }),
+        publicClient.readContract({
+          address: POOL_ADDRESS,
+          abi: POOL_ABI,
+          functionName: "fee",
+        }),
+      ]);
 
-    const slot0Array = slot0 as unknown as [bigint, number, number, number, number, number, boolean];
-    const [sqrtPriceX96, tick] = slot0Array;
+      const slot0Array = slot0 as unknown as [bigint, number, number, number, number, number, boolean];
+      const [sqrtPriceX96, tick] = slot0Array;
 
-    return {
-      poolAddress: POOL_ADDRESS,
-      token0: token0 as string,
-      token1: token1 as string,
-      fee: fee as number,
-      liquidity: liquidity.toString(),
-      sqrtPriceX96: sqrtPriceX96.toString(),
-      tick,
-    };
+      return {
+        poolAddress: POOL_ADDRESS,
+        token0: token0 as string,
+        token1: token1 as string,
+        fee: fee as number,
+        liquidity: liquidity.toString(),
+        sqrtPriceX96: sqrtPriceX96.toString(),
+        tick,
+      };
+    }, "getPoolInfo");
   } catch (error) {
     console.error("Error getting pool info:", error);
     return null;
@@ -592,49 +640,79 @@ export async function getPoolInfo(): Promise<{
 
 /**
  * Get current price for a symbol
+ * Tries CoinGecko API first for accurate USD prices, then falls back to pool price
  */
 export async function getCurrentPriceV3(symbol: string): Promise<number> {
-  // Try to get price from pool
+  // First, try to get real market price from CoinGecko
+  try {
+    const coinGeckoIds: Record<string, string> = {
+      BTC: "bitcoin",
+      WBTC: "wrapped-bitcoin",
+      ETH: "ethereum",
+      WETH: "ethereum",
+    };
+
+    const coinId = coinGeckoIds[symbol.toUpperCase()];
+    if (coinId) {
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data[coinId]?.usd) {
+          return data[coinId].usd;
+        }
+      }
+    }
+  } catch (error) {
+    // CoinGecko failed, try pool price
+    console.debug("CoinGecko price fetch failed, trying pool price:", error);
+  }
+
+  // Fallback: Try to get price from pool
   const poolInfo = await getPoolInfo();
   if (poolInfo && poolInfo.sqrtPriceX96) {
     // Calculate price from sqrtPriceX96
     // price = (sqrtPriceX96 / 2^96)^2
     const sqrtPriceX96 = BigInt(poolInfo.sqrtPriceX96);
     const Q96 = BigInt(2) ** BigInt(96);
-    
+
     // price = (sqrtPriceX96^2) / (2^192)
     const priceX192 = sqrtPriceX96 * sqrtPriceX96;
     const Q192 = Q96 * Q96;
-    
+
     // Adjust for decimals (USDC has 6, WBTC has 8)
     // If token0 is USDC and token1 is WBTC:
     // price represents WBTC/USDC, need to invert for USDC/WBTC
     const rawPrice = Number(priceX192) / Number(Q192);
-    
+
     // Adjust for decimal difference (10^6 / 10^8 = 10^-2)
     const decimalAdjustedPrice = rawPrice * (10 ** (8 - 6));
-    
+
     // Invert to get USDC per WBTC
     const usdcPerWbtc = 1 / decimalAdjustedPrice;
-    
+
     if (usdcPerWbtc > 0 && usdcPerWbtc < 1000000) {
       return usdcPerWbtc;
     }
   }
 
-  // Fallback mock prices
+  // Last resort: Use approximate market prices
   const basePrices: Record<string, number> = {
-    BTC: 45000,
-    WBTC: 45000,
-    ETH: 3000,
-    WETH: 3000,
+    BTC: 97000,
+    WBTC: 97000,
+    ETH: 3400,
+    WETH: 3400,
   };
 
-  return basePrices[symbol] || 3000;
+  return basePrices[symbol] || 97000;
 }
 
 /**
- * Get token balance
+ * Get token balance with RPC fallback support
+ * Tries primary RPC first, then falls back to alternative RPCs if it fails
  */
 export async function getTokenBalanceV3(
   userAddress: string,
@@ -645,12 +723,7 @@ export async function getTokenBalanceV3(
     throw new Error(`Token ${symbol} not configured`);
   }
 
-  const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http(BASE_SEPOLIA_RPC_URL),
-  });
-
-  try {
+  return await withRpcFallback(async (publicClient) => {
     const balance = await publicClient.readContract({
       address: tokenInfo.address,
       abi: ERC20_ABI,
@@ -662,9 +735,7 @@ export async function getTokenBalanceV3(
       balance: balance.toString(),
       formatted: formatUnits(balance, tokenInfo.decimals),
     };
-  } catch (error: any) {
-    throw new Error(`Failed to get balance: ${error.message}`);
-  }
+  }, `getTokenBalance(${symbol})`);
 }
 
 /**

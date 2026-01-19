@@ -14,6 +14,11 @@ import { createPublicClient, createWalletClient, http, formatUnits, parseUnits, 
 import { baseSepolia, base } from "viem/chains";
 import type { WalletClient, PublicClient, Address } from "viem";
 import { getX402Network, X402_USDC_ADDRESS, getX402PaymentAddress } from "./x402-v2";
+import { getCurrentChain, isMainnet } from "./config/networks";
+import { SPENDING_LIMIT_TIERS, type SpendingLimitTier } from "./config/app";
+
+// Re-export for backward compatibility
+export { SPENDING_LIMIT_TIERS, type SpendingLimitTier };
 
 // ERC20 ABI for approval operations
 const ERC20_APPROVAL_ABI = [
@@ -60,9 +65,9 @@ const ERC20_APPROVAL_ABI = [
     },
 ] as const;
 
-// Get the chain configuration
+// Get the chain configuration using centralized config
 function getChain() {
-    return getX402Network() === "base" ? base : baseSepolia;
+    return getCurrentChain();
 }
 
 // Create public client for reading blockchain state
@@ -73,18 +78,6 @@ function getPublicClient() {
         transport: http(),
     }) as any;
 }
-
-/**
- * Spending limit tiers for user convenience
- */
-export const SPENDING_LIMIT_TIERS = {
-    small: { amount: 10, label: "$10" },
-    medium: { amount: 50, label: "$50" },
-    large: { amount: 100, label: "$100" },
-    unlimited: { amount: 1000000, label: "Unlimited" }, // Max approval
-} as const;
-
-export type SpendingLimitTier = keyof typeof SPENDING_LIMIT_TIERS;
 
 /**
  * Approval status for a user

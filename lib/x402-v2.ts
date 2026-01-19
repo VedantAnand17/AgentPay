@@ -12,23 +12,21 @@ import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import type { WalletClient } from "viem";
+import {
+    getCurrentNetwork,
+    getCurrentChainId,
+    getCurrentUsdcAddress,
+    type NetworkName,
+} from "./config";
 
 // Environment configuration
 // Default to a test address if not set (users should set their own)
 const DEFAULT_PAYMENT_ADDRESS = "0x0000000000000000000000000000000000000001" as `0x${string}`;
-const DEFAULT_BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as `0x${string}`; // Official Base Sepolia USDC
 
 const X402_PAYMENT_ADDRESS = (process.env.X402_PAYMENT_ADDRESS || process.env.ADDRESS || DEFAULT_PAYMENT_ADDRESS) as `0x${string}`;
-const X402_NETWORK = process.env.X402_NETWORK || "base-sepolia";
-const useMainnetFacilitator = process.env.X402_ENV === "mainnet";
 
-// USDC addresses per network
-const USDC_ADDRESSES: Record<string, `0x${string}`> = {
-    "base-sepolia": (process.env.BASE_SEPOLIA_USDC_ADDRESS || DEFAULT_BASE_SEPOLIA_USDC) as `0x${string}`,
-    "base": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-};
-
-export const X402_USDC_ADDRESS = USDC_ADDRESSES[useMainnetFacilitator ? "base" : X402_NETWORK] || USDC_ADDRESSES["base-sepolia"];
+// Re-export USDC address from centralized config for backward compatibility
+export const X402_USDC_ADDRESS = getCurrentUsdcAddress();
 
 // Validate required environment variables
 if (X402_PAYMENT_ADDRESS === DEFAULT_PAYMENT_ADDRESS) {
@@ -86,11 +84,28 @@ export function createBrowserX402Client(walletClient: WalletClient): {
         // Create x402 client
         const client = new x402Client();
 
-        // Register EVM exact payment scheme with wallet client signer
-        // The wallet client's account acts as the signer
-        registerExactEvmScheme(client, {
-            signer: walletClient.account as any
-        });
+        // Create a proper signer that wraps the walletClient
+        // The signer must have both address AND signTypedData method
+        const signer = {
+            address: walletClient.account.address,
+            signTypedData: async (message: {
+                domain: Record<string, unknown>;
+                types: Record<string, unknown>;
+                primaryType: string;
+                message: Record<string, unknown>;
+            }) => {
+                return await walletClient.signTypedData({
+                    account: walletClient.account!,
+                    domain: message.domain as any,
+                    types: message.types as any,
+                    primaryType: message.primaryType,
+                    message: message.message,
+                });
+            },
+        };
+
+        // Register EVM exact payment scheme with the proper signer
+        registerExactEvmScheme(client, { signer });
 
         // Create HTTP client
         const httpClient = new x402HTTPClient(client);
@@ -109,7 +124,7 @@ export function createBrowserX402Client(walletClient: WalletClient): {
  * Get the network name for x402
  */
 export function getX402Network(): string {
-    return useMainnetFacilitator ? "base" : X402_NETWORK;
+    return getCurrentNetwork();
 }
 
 /**
@@ -164,9 +179,6 @@ export function getX402PaymentConfig(intent: {
  * Get chain ID for the current network
  */
 export function getX402ChainId(): number {
-    const chainIds: Record<string, number> = {
-        "base-sepolia": 84532,
-        "base": 8453,
-    };
-    return chainIds[getX402Network()] || 84532;
+    return getCurrentChainId();
 }
+

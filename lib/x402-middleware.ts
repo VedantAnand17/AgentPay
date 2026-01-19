@@ -17,35 +17,24 @@ import { registerExactEvmScheme } from "@x402/evm/exact/server";
 import { getAddress } from "viem";
 import type { Network } from "@x402/core/types";
 import type { TradeIntent } from "./types";
+import {
+  getCurrentChainId,
+  getNetworkCAIP2 as getNetworkCAIP2FromConfig,
+  getCurrentUsdcAddress,
+} from "./config";
+import { X402_CONFIG } from "./config/app";
 
 // Environment configuration
 const X402_PAYMENT_ADDRESS = (process.env.X402_PAYMENT_ADDRESS || process.env.ADDRESS) as `0x${string}`;
-const X402_NETWORK = process.env.X402_NETWORK || "base-sepolia";
-const useMainnetFacilitator = process.env.X402_ENV === "mainnet";
-
-// USDC addresses per network
-const USDC_ADDRESSES: Record<string, `0x${string}`> = {
-  "base-sepolia": (process.env.BASE_SEPOLIA_USDC_ADDRESS || "0xB6c34A382a45F93682B03dCa9C48e3710e76809F") as `0x${string}`,
-  "base": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-};
-
-const X402_USDC_ADDRESS = USDC_ADDRESSES[useMainnetFacilitator ? "base" : X402_NETWORK] || USDC_ADDRESSES["base-sepolia"];
-
-// Chain IDs for CAIP-2 formatted network
-const CHAIN_IDS: Record<string, number> = {
-  "base-sepolia": 84532,
-  "base": 8453,
-};
 
 // Get the CAIP-2 formatted network (e.g., "eip155:84532")
 function getNetworkCAIP2(): Network {
-  const chainId = CHAIN_IDS[useMainnetFacilitator ? "base" : X402_NETWORK] || 84532;
-  return `eip155:${chainId}` as Network;
+  return getNetworkCAIP2FromConfig() as Network;
 }
 
 // Get facilitator URL
 function getFacilitatorUrl(): string {
-  return process.env.FACILITATOR_URL || "https://x402.org/facilitator";
+  return X402_CONFIG.facilitatorUrl;
 }
 
 // Create x402 resource server (singleton)
@@ -179,7 +168,7 @@ export function getX402PaymentAddress(): `0x${string}` {
  * Get the USDC address for the current network
  */
 export function getX402UsdcAddress(): `0x${string}` {
-  return X402_USDC_ADDRESS;
+  return getCurrentUsdcAddress();
 }
 
 /**
