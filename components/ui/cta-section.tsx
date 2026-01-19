@@ -35,7 +35,7 @@ export function CTASection() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Button asChild size="lg" className="h-16 px-10 rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all duration-300 text-lg uppercase tracking-wider group">
+            <Button asChild size="lg" className="h-16 px-10 rounded-none border border-primary bg-primary/10 text-primary hover:shadow-[0_0_30px_-5px_hsl(var(--primary))] hover:border-primary/80 hover:text-green-300 transition-all duration-300 text-lg uppercase tracking-wider group">
               <Link className="flex items-center justify-center gap-2" href="/trade">
                 <Terminal className="w-5 h-5" />
                 Get AI Consultancy

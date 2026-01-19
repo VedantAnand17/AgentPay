@@ -707,7 +707,7 @@ export default function TradePage() {
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => open()} size="lg" className="rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all uppercase tracking-widest font-bold" aria-label="Connect your wallet to get started">
+                <Button onClick={() => open()} size="lg" className="rounded-none border border-primary bg-primary/10 text-primary hover:shadow-[0_0_30px_-5px_hsl(var(--primary))] hover:border-primary/80 hover:text-green-300 transition-all uppercase tracking-widest font-bold" aria-label="Connect your wallet to get started">
                   <Wallet className="w-4 h-4 mr-2" aria-hidden="true" />
                   Initialize Wallet
                 </Button>
@@ -719,6 +719,7 @@ export default function TradePage() {
         <AnimatePresence>
           {!isConnected && (
             <motion.div
+              key="auth-alert"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -737,6 +738,7 @@ export default function TradePage() {
           )}
 
           <motion.div
+            key="supported-pair-info"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-8 space-y-4"
@@ -754,6 +756,7 @@ export default function TradePage() {
 
           {error && (
             <motion.div
+              key="error-alert"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}

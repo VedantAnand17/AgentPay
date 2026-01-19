@@ -49,7 +49,7 @@ export function Navbar() {
                 {/* CTA + Mobile Menu Toggle */}
                 <div className="flex items-center gap-3">
                     {!isOnTradePage && (
-                        <Button asChild size="sm" className="hidden sm:flex rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all font-bold uppercase text-xs tracking-wider">
+                        <Button asChild size="sm" className="hidden sm:flex rounded-none border border-primary bg-primary/10 text-primary hover:shadow-[0_0_30px_-5px_hsl(var(--primary))] hover:border-primary/80 hover:text-green-300 transition-all font-bold uppercase text-xs tracking-wider">
                             <Link href="/trade">
                                 [ Initialize ]
                             </Link>
@@ -103,7 +103,7 @@ export function Navbar() {
                                 /Source
                             </a>
                             {!isOnTradePage && (
-                                <Button asChild size="sm" className="mt-2 rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all font-bold uppercase text-xs tracking-wider">
+                                <Button asChild size="sm" className="mt-2 rounded-none border border-primary bg-primary/10 text-primary hover:shadow-[0_0_30px_-5px_hsl(var(--primary))] hover:border-primary/80 hover:text-green-300 transition-all font-bold uppercase text-xs tracking-wider">
                                     <Link href="/trade">
                                         [ Initialize ]
                                     </Link>

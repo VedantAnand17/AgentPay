@@ -74,13 +74,12 @@ export function Hero() {
 
                     {/* CTA Buttons */}
                     <motion.div variants={item} className="flex flex-col sm:flex-row items-center gap-5 pt-6 w-full sm:w-auto">
-                        <Button asChild size="lg" className="h-14 px-8 w-full sm:w-auto rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all duration-300 font-mono text-lg uppercase tracking-wider group relative overflow-hidden">
+                        <Button asChild size="lg" className="h-14 px-8 w-full sm:w-auto rounded-none border border-primary bg-primary/10 text-primary hover:shadow-[0_0_30px_-5px_hsl(var(--primary))] hover:border-primary/80 hover:text-green-300 transition-all duration-300 font-mono text-lg uppercase tracking-wider group relative overflow-hidden">
                             <Link href="/trade">
                                 <span className="relative z-10 flex items-center gap-2">
                                     <Lock className="w-5 h-5" />
                                     START SECURE SESSION
                                 </span>
-                                <div className="absolute inset-0 bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                             </Link>
                         </Button>
 
