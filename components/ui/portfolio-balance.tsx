@@ -26,6 +26,7 @@ interface TokenBalance {
     color: string;
     usdValue?: number;
     change24h?: number;
+    hasWarning?: boolean;
 }
 
 interface PortfolioBalanceProps {
@@ -33,13 +34,7 @@ interface PortfolioBalanceProps {
     isConnected: boolean;
 }
 
-// Mock price data (in production, fetch from an oracle or API)
-const TOKEN_PRICES: Record<string, number> = {
-    BTC: 97000,
-    USDC: 1,
-    ETH: 3400,
-};
-
+// Token metadata for display
 const TOKEN_META: Record<string, { name: string; icon: string; color: string }> = {
     BTC: { name: "Bitcoin", icon: "₿", color: "text-orange-500" },
     USDC: { name: "USD Coin", icon: "$", color: "text-green-500" },
@@ -64,18 +59,40 @@ export function PortfolioBalance({ address, isConnected }: PortfolioBalanceProps
         setError(null);
 
         try {
+            // Fetch real prices from CoinGecko API
+            let tokenPrices: Record<string, number> = { BTC: 97000, USDC: 1, ETH: 3400 };
+            let tokenChanges: Record<string, number> = { BTC: 0, USDC: 0, ETH: 0 };
+
+            try {
+                const pricesRes = await fetch("/api/prices");
+                if (pricesRes.ok) {
+                    const pricesData = await pricesRes.json();
+                    tokenPrices = pricesData.prices || tokenPrices;
+                    tokenChanges = pricesData.change24h || tokenChanges;
+                }
+            } catch (priceErr) {
+                console.debug("Using fallback prices:", priceErr);
+            }
+
             // Fetch balances for supported tokens
             const symbols = ["BTC", "USDC"];
             const balancePromises = symbols.map(async (symbol) => {
                 try {
                     const res = await fetch(`/api/balances?address=${address}&symbol=${symbol}`);
-                    if (!res.ok) {
-                        throw new Error(`Failed to fetch ${symbol} balance`);
-                    }
                     const data = await res.json();
 
+                    // Check for API error responses
+                    if (!res.ok) {
+                        // Log at debug level since this is expected for testnet addresses without tokens
+                        if (process.env.NODE_ENV === "development") {
+                            console.debug(`Could not fetch ${symbol} balance:`, data.error || "Unknown error");
+                        }
+                        return null;
+                    }
+
                     const meta = TOKEN_META[symbol] || { name: symbol, icon: "◆", color: "text-white" };
-                    const price = TOKEN_PRICES[symbol] || 0;
+                    const price = tokenPrices[symbol] || 0;
+                    const change24h = tokenChanges[symbol] || 0;
                     const formattedBalance = parseFloat(data.formatted || "0");
 
                     return {
@@ -86,10 +103,14 @@ export function PortfolioBalance({ address, isConnected }: PortfolioBalanceProps
                         icon: meta.icon,
                         color: meta.color,
                         usdValue: formattedBalance * price,
-                        change24h: Math.random() > 0.5 ? Math.random() * 5 : -Math.random() * 3, // Mock 24h change
+                        change24h: change24h, // Real 24h change from CoinGecko
+                        hasWarning: !!data.warning, // Track if this was a fallback response
                     } as TokenBalance;
                 } catch (err) {
-                    console.error(`Error fetching ${symbol} balance:`, err);
+                    // Network or parsing error - log at debug level
+                    if (process.env.NODE_ENV === "development") {
+                        console.debug(`Network error fetching ${symbol} balance:`, err);
+                    }
                     return null;
                 }
             });
@@ -100,8 +121,9 @@ export function PortfolioBalance({ address, isConnected }: PortfolioBalanceProps
             setBalances(validBalances);
             setLastUpdated(new Date());
         } catch (err: any) {
-            console.error("Error fetching balances:", err);
-            setError(err.message || "Failed to fetch balances");
+            // Only show error for unexpected failures
+            console.error("Unexpected error fetching balances:", err);
+            setError("Could not load balances");
         } finally {
             setLoading(false);
             setIsRefreshing(false);

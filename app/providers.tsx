@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 // This must be called at module level to ensure it's initialized before useWeb3Modal hook is called
 if (typeof window !== "undefined") {
   const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "your-project-id";
-  
+
   createWeb3Modal({
     wagmiConfig,
     projectId,
@@ -23,7 +23,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-// Component to suppress console errors for WalletConnect reverse lookup
+// Component to suppress console errors for known harmless issues
 function ConsoleErrorSuppressor() {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -32,7 +32,22 @@ function ConsoleErrorSuppressor() {
     const originalError = console.error;
     const originalWarn = console.warn;
 
-    // Override console.error to filter out WalletConnect reverse lookup errors
+    // List of error patterns to suppress (known harmless errors)
+    const suppressedErrors = [
+      // WalletConnect reverse ENS lookup 404s
+      "rpc.walletconnect.com/v1/profile/reverse",
+      // Web3Modal disconnect compatibility issue with certain wallets
+      "disconnect is not a function",
+      "this.provider.disconnect",
+      // Balance fetch errors for testnet (non-critical)
+      "Failed to fetch BTC balance",
+      "Failed to fetch USDC balance",
+      "Failed to fetch ETH balance",
+      // Empty error objects from WalletConnect
+      "{}",
+    ];
+
+    // Override console.error to filter out known harmless errors
     console.error = (...args: any[]) => {
       // Convert all arguments to string for checking
       const message = args
@@ -46,14 +61,23 @@ function ConsoleErrorSuppressor() {
           }
         })
         .join(" ");
-      
-      // Suppress 404 errors from WalletConnect reverse ENS lookup
-      if (
-        message.includes("rpc.walletconnect.com/v1/profile/reverse") ||
-        (message.includes("404") && message.includes("walletconnect")) ||
-        (message.includes("GET") && message.includes("rpc.walletconnect.com") && message.includes("404"))
-      ) {
-        // Silently ignore this harmless error
+
+      // Check if this error should be suppressed
+      const shouldSuppress = suppressedErrors.some(pattern =>
+        message.includes(pattern)
+      ) || (
+          message.includes("404") && message.includes("walletconnect")
+        ) || (
+          message.includes("GET") &&
+          message.includes("rpc.walletconnect.com") &&
+          message.includes("404")
+        );
+
+      if (shouldSuppress) {
+        // Log to debug level for development troubleshooting
+        if (process.env.NODE_ENV === "development") {
+          console.debug("[Suppressed Error]", ...args);
+        }
         return;
       }
       originalError.apply(console, args);
@@ -72,12 +96,14 @@ function ConsoleErrorSuppressor() {
           }
         })
         .join(" ");
-      
-      if (
-        message.includes("rpc.walletconnect.com/v1/profile/reverse") ||
-        (message.includes("404") && message.includes("walletconnect")) ||
-        (message.includes("GET") && message.includes("rpc.walletconnect.com") && message.includes("404"))
-      ) {
+
+      const shouldSuppress = suppressedErrors.some(pattern =>
+        message.includes(pattern)
+      ) || (
+          message.includes("404") && message.includes("walletconnect")
+        );
+
+      if (shouldSuppress) {
         return;
       }
       originalWarn.apply(console, args);

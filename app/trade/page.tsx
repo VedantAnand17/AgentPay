@@ -10,6 +10,7 @@ declare global {
   }
 }
 import { useState, useEffect, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useAccount, useWalletClient, useDisconnect, useSwitchChain, useChainId } from "wagmi";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
 import { createWalletClient, custom, http } from "viem";
@@ -24,9 +25,6 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { PaymentCheckout } from "@/components/ui/payment-checkout";
-import { PortfolioBalance } from "@/components/ui/portfolio-balance";
-import { SpendingLimitApproval } from "@/components/ui/spending-limit-approval";
 import { motion, AnimatePresence } from "framer-motion";
 import { Info, AlertCircle, CheckCircle2, Wallet, ArrowRightLeft, ArrowRight, TrendingUp, Loader2, Zap, ShieldCheck, Activity, Terminal, Lock, Key, Cpu, Radio, Network, Unlock } from "lucide-react";
 import {
@@ -35,6 +33,24 @@ import {
   revokeApproval,
   type SpendingLimitTier,
 } from "@/lib/x402-approval";
+import { APP_VERSION } from "@/lib/config/app";
+
+// Dynamic imports for heavy components - loads after initial render
+// This reduces main bundle size and improves Time to Interactive (TTI)
+const PaymentCheckout = dynamic(
+  () => import("@/components/ui/payment-checkout").then((m) => m.PaymentCheckout),
+  { ssr: false }
+);
+
+const PortfolioBalance = dynamic(
+  () => import("@/components/ui/portfolio-balance").then((m) => m.PortfolioBalance),
+  { ssr: false }
+);
+
+const SpendingLimitApproval = dynamic(
+  () => import("@/components/ui/spending-limit-approval").then((m) => m.SpendingLimitApproval),
+  { ssr: false }
+);
 
 export default function TradePage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -134,10 +150,28 @@ export default function TradePage() {
       // Create x402 V2 client
       const client = new x402Client();
 
-      // Register EVM exact payment scheme with wallet account as signer
-      registerExactEvmScheme(client, {
-        signer: walletClient.account as any
-      });
+      // Create a proper signer that wraps the walletClient
+      // The signer must have both address AND signTypedData method
+      const signer = {
+        address: walletClient.account.address,
+        signTypedData: async (message: {
+          domain: Record<string, unknown>;
+          types: Record<string, unknown>;
+          primaryType: string;
+          message: Record<string, unknown>;
+        }) => {
+          return await walletClient.signTypedData({
+            account: walletClient.account,
+            domain: message.domain as any,
+            types: message.types as any,
+            primaryType: message.primaryType,
+            message: message.message,
+          });
+        },
+      };
+
+      // Register EVM exact payment scheme with the proper signer
+      registerExactEvmScheme(client, { signer });
 
       console.log("Initialized x402 V2 client:", {
         account: walletClient.account?.address,
@@ -440,11 +474,26 @@ export default function TradePage() {
         hasApproval: approvalStatus?.isApproved,
       });
 
-      // Create a fresh x402 V2 client
+      // Create a fresh x402 V2 client with proper signer wrapper
       const freshClient = new x402Client();
-      registerExactEvmScheme(freshClient, {
-        signer: freshWalletClient.account as any
-      });
+      const freshSigner = {
+        address: freshWalletClient.account!.address,
+        signTypedData: async (message: {
+          domain: Record<string, unknown>;
+          types: Record<string, unknown>;
+          primaryType: string;
+          message: Record<string, unknown>;
+        }) => {
+          return await freshWalletClient.signTypedData({
+            account: freshWalletClient.account!,
+            domain: message.domain as any,
+            types: message.types as any,
+            primaryType: message.primaryType,
+            message: message.message,
+          });
+        },
+      };
+      registerExactEvmScheme(freshClient, { signer: freshSigner });
 
       // Create x402-fetch wrapper - with pre-approval, this won't require signature popup
       const freshFetchWithPayment = wrapFetchWithPayment(fetch, freshClient);
@@ -589,16 +638,21 @@ export default function TradePage() {
             </h1>
             <p className="text-muted-foreground text-sm font-light flex items-center gap-2 uppercase tracking-wide">
               <ShieldCheck className="w-4 h-4" />
-              Secure Uplink V1.0.4 Established
+              Secure Uplink V{APP_VERSION} Established
             </p>
           </div>
 
           <div className="flex flex-col items-end gap-3">
-            {/* Urgency Ticker */}
-            <div className="flex items-center gap-3 bg-red-950/30 border border-red-500/30 px-3 py-1.5">
-              <Activity className="w-4 h-4 text-red-500 animate-pulse" />
-              <span className="text-xs font-mono font-medium text-red-500 uppercase tracking-widest">
-                Load: 94% [HIGH]
+            {/* System Status Indicator - shows real connection status */}
+            <div className={`flex items-center gap-3 px-3 py-1.5 ${isConnected
+                ? 'bg-green-950/30 border border-green-500/30'
+                : 'bg-amber-950/30 border border-amber-500/30'
+              }`}>
+              <Activity className={`w-4 h-4 animate-pulse ${isConnected ? 'text-green-500' : 'text-amber-500'
+                }`} />
+              <span className={`text-xs font-mono font-medium uppercase tracking-widest ${isConnected ? 'text-green-500' : 'text-amber-500'
+                }`}>
+                {isConnected ? 'READY' : 'STANDBY'}
               </span>
             </div>
 
@@ -610,6 +664,7 @@ export default function TradePage() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onClick={() => setShowApprovalModal(true)}
+                    aria-label={approvalStatus?.isApproved ? `Manage spending limit: $${approvalStatus.formattedAllowance} approved` : "Set spending limit approval"}
                     className={`bg-black border px-3 py-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider transition-all hover:border-primary/50 ${approvalStatus?.isApproved
                       ? 'border-green-500/30 text-green-400'
                       : 'border-amber-500/30 text-amber-400'
@@ -617,13 +672,13 @@ export default function TradePage() {
                   >
                     {approvalStatus?.isApproved ? (
                       <>
-                        <Unlock className="w-3 h-3" />
+                        <Unlock className="w-3 h-3" aria-hidden="true" />
                         <span className="hidden sm:inline">Auto-Pay:</span>
                         <span className="font-mono">${approvalStatus.formattedAllowance}</span>
                       </>
                     ) : (
                       <>
-                        <Lock className="w-3 h-3" />
+                        <Lock className="w-3 h-3" aria-hidden="true" />
                         <span className="hidden sm:inline">Set Limit</span>
                       </>
                     )}
@@ -643,17 +698,17 @@ export default function TradePage() {
                     />
                     {chainId === baseSepolia.id ? 'Base Sepolia' : 'Wrong Network'}
                   </motion.div>
-                  <Button onClick={() => open()} variant="outline" className="border-white/10 rounded-none hover:bg-white/5 uppercase text-xs tracking-wider">
-                    <Wallet className="w-4 h-4 mr-2" />
+                  <Button onClick={() => open()} variant="outline" className="border-white/10 rounded-none hover:bg-white/5 uppercase text-xs tracking-wider" aria-label={`Connected wallet: ${formatAddress(address || "")}`}>
+                    <Wallet className="w-4 h-4 mr-2" aria-hidden="true" />
                     {formatAddress(address || "")}
                   </Button>
-                  <Button onClick={() => disconnect()} variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 rounded-none">
-                    <ArrowRightLeft className="w-4 h-4" />
+                  <Button onClick={() => disconnect()} variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 rounded-none" aria-label="Disconnect wallet">
+                    <ArrowRightLeft className="w-4 h-4" aria-hidden="true" />
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => open()} size="lg" className="rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all uppercase tracking-widest font-bold">
-                  <Wallet className="w-4 h-4 mr-2" />
+                <Button onClick={() => open()} size="lg" className="rounded-none border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all uppercase tracking-widest font-bold" aria-label="Connect your wallet to get started">
+                  <Wallet className="w-4 h-4 mr-2" aria-hidden="true" />
                   Initialize Wallet
                 </Button>
               )}
@@ -671,7 +726,7 @@ export default function TradePage() {
             >
               <Alert className="border-primary/50 bg-primary/5 rounded-none">
                 <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-primary" />
+                  <Info className="w-4 h-4 text-primary" aria-hidden="true" />
                   <AlertTitle className="text-primary font-bold uppercase tracking-wider text-xs">Auth Required</AlertTitle>
                 </div>
                 <AlertDescription className="text-primary/80 text-xs font-mono mt-1">
@@ -687,11 +742,11 @@ export default function TradePage() {
             className="mb-8 space-y-4"
           >
             <div className="border border-blue-900/50 bg-blue-950/10 p-4 flex items-start gap-3">
-              <Info className="h-4 w-4 text-blue-400 mt-1" />
+              <Info className="h-4 w-4 text-blue-400 mt-1" aria-hidden="true" />
               <div>
                 <h4 className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">Supported Pair</h4>
                 <p className="text-blue-300/80 text-xs font-mono">
-                  BTC (WBTC) / USDC [Pool: <span className="text-blue-200">0x657E...cBb0b6</span>]
+                  BTC (WBTC) / USDC [Pool: <span className="text-blue-200">0x657E…cBb0b6</span>]
                 </p>
               </div>
             </div>
@@ -703,9 +758,12 @@ export default function TradePage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               className="mb-8"
+              role="alert"
+              aria-live="assertive"
+              aria-atomic="true"
             >
               <Alert variant="destructive" className="rounded-none border-red-500/50 bg-red-950/20">
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
                 <AlertTitle className="uppercase tracking-wider font-bold text-xs">System Error</AlertTitle>
                 <AlertDescription className="font-mono text-xs">{error}</AlertDescription>
               </Alert>
@@ -769,32 +827,56 @@ export default function TradePage() {
 
                 {/* Side Selection - Segmented Control */}
                 <div className="space-y-3">
-                  <Label className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Strategy Mode</Label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <Label id="strategy-mode-label" className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Strategy Mode</Label>
+                  <div
+                    className="grid grid-cols-2 gap-4"
+                    role="radiogroup"
+                    aria-labelledby="strategy-mode-label"
+                  >
                     <button
+                      type="button"
+                      role="radio"
+                      aria-checked={side === "buy"}
                       onClick={() => {
                         setSide("buy");
                         setTradeIntent(null);
                       }}
-                      className={`h-12 border flex items-center justify-center gap-2 transition-all font-mono uppercase text-xs tracking-wider font-bold ${side === "buy"
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                          e.preventDefault();
+                          setSide("sell");
+                          setTradeIntent(null);
+                        }
+                      }}
+                      className={`h-12 border flex items-center justify-center gap-2 transition-all font-mono uppercase text-xs tracking-wider font-bold focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-black ${side === "buy"
                         ? "bg-green-950/30 border-green-500 text-green-500"
                         : "bg-black border-white/10 text-muted-foreground hover:border-white/30"
                         }`}
                     >
-                      <Radio className={`w-3 h-3 ${side === "buy" ? "fill-current" : ""}`} />
+                      <Radio className={`w-3 h-3 ${side === "buy" ? "fill-current" : ""}`} aria-hidden="true" />
                       ACQUIRE (LONG)
                     </button>
                     <button
+                      type="button"
+                      role="radio"
+                      aria-checked={side === "sell"}
                       onClick={() => {
                         setSide("sell");
                         setTradeIntent(null);
                       }}
-                      className={`h-12 border flex items-center justify-center gap-2 transition-all font-mono uppercase text-xs tracking-wider font-bold ${side === "sell"
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                          e.preventDefault();
+                          setSide("buy");
+                          setTradeIntent(null);
+                        }
+                      }}
+                      className={`h-12 border flex items-center justify-center gap-2 transition-all font-mono uppercase text-xs tracking-wider font-bold focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-black ${side === "sell"
                         ? "bg-red-950/30 border-red-500 text-red-500"
                         : "bg-black border-white/10 text-muted-foreground hover:border-white/30"
                         }`}
                     >
-                      <Radio className={`w-3 h-3 ${side === "sell" ? "fill-current" : ""}`} />
+                      <Radio className={`w-3 h-3 ${side === "sell" ? "fill-current" : ""}`} aria-hidden="true" />
                       LIQUIDATE (SHORT)
                     </button>
                   </div>
