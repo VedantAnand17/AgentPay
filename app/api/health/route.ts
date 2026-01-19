@@ -37,10 +37,17 @@ const startTime = Date.now();
 async function checkDatabase(): Promise<boolean> {
     try {
         // Import dynamically to avoid build-time issues
-        const { default: getDb } = await import("@/lib/db");
+        const { default: getDb, dbEnvironment } = await import("@/lib/db");
         const db = getDb();
-        // Simple query to check connectivity
-        db.prepare("SELECT 1").get();
+        
+        // For in-memory mode (Vercel), just check it's initialized
+        if (dbEnvironment.isVercel) {
+            return Boolean(db && typeof db === "object");
+        }
+        
+        // For SQLite, run a simple query
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (db as any).prepare("SELECT 1").get();
         return true;
     } catch (error) {
         console.error("Database health check failed:", error);
