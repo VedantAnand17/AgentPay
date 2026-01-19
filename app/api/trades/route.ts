@@ -2,6 +2,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executedTrades } from "@/lib/db";
 import { getCurrentPriceV3 } from "@/lib/uniswap-v3";
+import { logger } from "@/lib/logger";
+
+// Sanitize error message for client response
+const sanitizeErrorMessage = (error: unknown): string => {
+  if (process.env.NODE_ENV === 'development' && error instanceof Error) {
+    return error.message;
+  }
+  return "An error occurred while processing your request";
+};
 
 // Calculate PnL for trades
 async function calculatePnLForTrades(
@@ -16,16 +25,25 @@ async function calculatePnLForTrades(
   });
 
   const currentPrices: Record<string, number> = {};
-  for (const symbol of symbolSet) {
+
+  // Fetch all prices in parallel using Promise.all instead of sequential loop
+  // This eliminates waterfall: N symbols fetched in 1 round trip instead of N
+  const pricePromises = Array.from(symbolSet).map(async (symbol) => {
     try {
-      currentPrices[symbol] = await getCurrentPriceV3(symbol);
+      const price = await getCurrentPriceV3(symbol);
+      return { symbol, price };
     } catch (error) {
-      console.error(`Failed to get current price for ${symbol}:`, error);
+      logger.error(`Failed to get current price for ${symbol}:`, error);
       // Use execution price as fallback
       const tradeWithSymbol = trades.find((t) => t.tradeIntent?.symbol === symbol);
-      currentPrices[symbol] = tradeWithSymbol?.executionPrice || 45000;
+      return { symbol, price: tradeWithSymbol?.executionPrice || 45000 };
     }
-  }
+  });
+
+  const priceResults = await Promise.all(pricePromises);
+  priceResults.forEach(({ symbol, price }) => {
+    currentPrices[symbol] = price;
+  });
 
   // Separate buy and sell trades
   const buyTrades: Array<any> = [];
@@ -83,7 +101,7 @@ async function calculatePnLForTrades(
     // For sell trades, check if they have a matching buy
     if (tradeIntent.side === "sell") {
       const matchingBuy = sellTradeMatches.get(trade.id);
-      
+
       if (matchingBuy) {
         // Calculate realized PnL
         const buyPrice = matchingBuy.executionPrice;
@@ -112,7 +130,7 @@ async function calculatePnLForTrades(
     } else {
       // For buy trades, check if they're closed
       const isClosed = matchedBuyIds.has(trade.id);
-      
+
       if (isClosed) {
         // This buy was matched with a sell, PnL already calculated on the sell
         return {
@@ -150,10 +168,10 @@ export async function GET(request: NextRequest) {
     const tradesWithPnL = await calculatePnLForTrades(trades);
 
     return NextResponse.json(tradesWithPnL);
-  } catch (error: any) {
-    console.error("Error fetching trades:", error);
+  } catch (error) {
+    logger.error("Error fetching trades:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch trades" },
+      { error: sanitizeErrorMessage(error) },
       { status: 500 }
     );
   }

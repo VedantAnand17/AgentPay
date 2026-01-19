@@ -4,44 +4,32 @@ import { TradeIntent } from "@/lib/types";
 import { tradeIntents } from "@/lib/db";
 import { createX402PaymentRequest } from "@/lib/x402";
 import { randomBytes } from "crypto";
+import { calculateTradeFee } from "@/lib/config/app";
+import { createTradeIntentSchema, validateRequest } from "@/lib/validation";
+import { rateLimitCheck } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = rateLimitCheck(request, "standard");
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
-    const { userAddress, agentId, symbol, side, size, leverage } = body;
 
-    // Validate required fields (leverage is optional, defaults to 1 for spot trades)
-    if (!userAddress || !agentId || !symbol || !side || !size) {
+    // Validate input using Zod schema
+    const validation = validateRequest(createTradeIntentSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields: userAddress, agentId, symbol, side, size" },
+        { error: validation.error, details: validation.details },
         { status: 400 }
       );
     }
 
-    if (side !== "buy" && side !== "sell") {
-      return NextResponse.json(
-        { error: "side must be 'buy' or 'sell'" },
-        { status: 400 }
-      );
-    }
+    const { userAddress, agentId, symbol, side, size, leverage } = validation.data;
 
-    // Validate symbol - only BTC (WBTC) is supported
-    const supportedSymbols = ["BTC", "WBTC"];
-    if (!supportedSymbols.includes(symbol.toUpperCase())) {
-      return NextResponse.json(
-        { error: `Symbol '${symbol}' is not supported. Only BTC (WBTC) is supported via the deployed Uniswap V3 pool.` },
-        { status: 400 }
-      );
-    }
-
-    // Calculate expected payment amount based on trade size
-    // Fee structure: 0.1% of trade size, minimum $0.001, maximum $1.00
-    const tradeSize = parseFloat(size);
-    const feePercentage = 0.001; // 0.1%
-    const calculatedFee = tradeSize * feePercentage;
-    const minFee = 0.001;
-    const maxFee = 1.0;
-    const expectedPaymentAmount = Math.max(minFee, Math.min(maxFee, calculatedFee)).toFixed(6);
+    // Calculate expected payment amount using centralized fee config
+    const expectedPaymentAmount = calculateTradeFee(size).toFixed(6);
 
     // Create trade intent
     const intent: TradeIntent = {
@@ -50,8 +38,8 @@ export async function POST(request: NextRequest) {
       agentId,
       symbol,
       side,
-      size: parseFloat(size),
-      leverage: leverage ? parseInt(leverage) : 1, // Default to 1x for spot trades
+      size,
+      leverage: leverage ?? 1,
       expectedPaymentAmount,
       status: "pending",
       createdAt: Date.now(),
@@ -70,12 +58,12 @@ export async function POST(request: NextRequest) {
       tradeIntent: intent,
       paymentRequest,
     });
-  } catch (error: any) {
-    console.error("Error creating trade intent:", error);
+  } catch (error: unknown) {
+    logger.error("Error creating trade intent:", error);
+    const message = error instanceof Error ? error.message : "Failed to create trade intent";
     return NextResponse.json(
-      { error: error.message || "Failed to create trade intent" },
+      { error: message },
       { status: 500 }
     );
   }
 }
-

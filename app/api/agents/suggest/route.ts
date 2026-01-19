@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { executeAgent } from "@/lib/agents";
 import { x402PaymentRequired } from "@/lib/x402-middleware";
 import { getPaymentAddress, getNetwork } from "@/lib/x402";
+import { getConsultancyFeeFormatted } from "@/lib/config/app";
 
 // Define PaymentPayload type locally (V2 compatible)
 interface PaymentPayload {
@@ -11,8 +12,8 @@ interface PaymentPayload {
   [key: string]: unknown;
 }
 
-// Consultancy fee: $0.10 USD (100,000 base units for USDC with 6 decimals)
-const CONSULTANCY_FEE = "$0.10";
+// Consultancy fee from centralized config
+const CONSULTANCY_FEE = getConsultancyFeeFormatted();
 
 async function suggestHandler(request: NextRequest, paymentInfo?: PaymentPayload) {
   try {

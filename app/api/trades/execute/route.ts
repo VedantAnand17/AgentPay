@@ -5,6 +5,18 @@ import { tradeIntents, executedTrades } from "@/lib/db";
 import { createX402TradeMiddleware } from "@/lib/x402-middleware";
 import { executeUniswapV3Swap } from "@/lib/uniswap-v3";
 import { randomBytes } from "crypto";
+import { logger } from "@/lib/logger";
+import { executeTradeSchema, validateRequest } from "@/lib/validation";
+import { rateLimitCheck } from "@/lib/rate-limit";
+import { withTransactionRetry } from "@/lib/utils/retry";
+
+// Sanitize error message for client response
+const sanitizeErrorMessage = (error: unknown): string => {
+  if (process.env.NODE_ENV === 'development' && error instanceof Error) {
+    return error.message;
+  }
+  return "An error occurred while executing the trade";
+};
 
 async function executeTradeHandler(request: NextRequest, paymentInfo?: any, tradeIntentId?: string) {
   try {
@@ -34,7 +46,7 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any, trad
     // Payment is already verified by x402 middleware (if request reaches here)
     // Extract payment ID from payment info
     const paymentId = paymentInfo?.id || paymentInfo?.paymentId || paymentInfo?.payment_id;
-    
+
     // Update intent status to paid
     if (paymentId) {
       tradeIntents.updateStatus(intentId, "paid", paymentId);
@@ -42,14 +54,16 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any, trad
       tradeIntents.updateStatus(intentId, "paid");
     }
 
-    // Execute Uniswap V3 spot swap on Base Sepolia
-    const { txHash, executionPrice } = await executeUniswapV3Swap({
-      userAddress: intent.userAddress,
-      symbol: intent.symbol,
-      side: intent.side,
-      size: intent.size,
-      leverage: intent.leverage,
-    });
+    // Execute Uniswap V3 spot swap on Base Sepolia with retry logic
+    const { txHash, executionPrice } = await withTransactionRetry(
+      () => executeUniswapV3Swap({
+        userAddress: intent.userAddress,
+        symbol: intent.symbol,
+        side: intent.side,
+        size: intent.size,
+        leverage: intent.leverage,
+      })
+    );
 
     // Create executed trade record
     const executedTrade = {
@@ -72,26 +86,33 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any, trad
       executedTrade,
       tradeIntent: intent,
     });
-  } catch (error: any) {
-    console.error("Error executing trade:", error);
+  } catch (error) {
+    logger.error("Error executing trade:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to execute trade" },
+      { error: sanitizeErrorMessage(error) },
       { status: 500 }
     );
   }
 }
 
 export async function POST(request: NextRequest) {
+  // Apply strict rate limiting for payment operations
+  const rateLimitResponse = rateLimitCheck(request, "payment");
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
-    const { tradeIntentId } = body;
 
-    if (!tradeIntentId) {
+    // Validate input using Zod schema
+    const validation = validateRequest(executeTradeSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required field: tradeIntentId" },
+        { error: validation.error, details: validation.details },
         { status: 400 }
       );
     }
+
+    const { tradeIntentId } = validation.data;
 
     // Load trade intent to get payment config
     const intent = tradeIntents.getById(tradeIntentId);
@@ -104,16 +125,16 @@ export async function POST(request: NextRequest) {
 
     // Create x402 middleware wrapper
     // Pass tradeIntentId to handler to avoid reading body twice
-    const handlerWithId = (req: NextRequest, paymentInfo?: any) => 
+    const handlerWithId = (req: NextRequest, paymentInfo?: any) =>
       executeTradeHandler(req, paymentInfo, tradeIntentId);
     const middleware = createX402TradeMiddleware(intent, handlerWithId);
-    
+
     // Execute with payment verification
     return middleware(request);
-  } catch (error: any) {
-    console.error("Error in execute endpoint:", error);
+  } catch (error) {
+    logger.error("Error in execute endpoint:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to execute trade" },
+      { error: sanitizeErrorMessage(error) },
       { status: 500 }
     );
   }
