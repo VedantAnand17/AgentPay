@@ -71,12 +71,12 @@ function getChain() {
 }
 
 // Create public client for reading blockchain state
-function getPublicClient() {
+function getPublicClient(): PublicClient {
     const chain = getChain();
     return createPublicClient({
         chain,
         transport: http(),
-    }) as any;
+    }) as PublicClient;
 }
 
 /**

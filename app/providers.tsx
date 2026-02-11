@@ -5,10 +5,7 @@ import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createWeb3Modal } from "@web3modal/wagmi/react";
 import { wagmiConfig } from "@/lib/wagmi-config";
-import { useEffect } from "react";
-
-// Create a query client
-const queryClient = new QueryClient();
+import { useState, useEffect } from "react";
 
 // Initialize Web3Modal synchronously on client side (before any hooks are used)
 // This must be called at module level to ensure it's initialized before useWeb3Modal hook is called
@@ -120,8 +117,22 @@ function ConsoleErrorSuppressor() {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Always wrap with WagmiProvider to avoid hook errors
-  // The wagmiConfig has ssr: false, so it's safe for client-side only
+  // Create QueryClient inside the component via lazy useState initializer.
+  // This avoids SSR cross-request cache pollution (module-level singletons are
+  // shared across all requests on the server) while remaining stable across re-renders.
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // Prevent aggressive refetching — wagmi queries are wallet-driven
+            staleTime: 5 * 60 * 1000, // 5 minutes
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>

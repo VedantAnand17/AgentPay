@@ -39,14 +39,12 @@ export const createTradeIntentSchema = z.object({
         .union([z.string(), z.number()])
         .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
         .refine((val) => val > 0, { message: "Size must be positive" }),
+    // Leverage is accepted for API compatibility but always coerced to 1.
+    // This platform only supports spot trading — no leveraged positions.
     leverage: z
         .union([z.string(), z.number()])
         .optional()
-        .transform((val) => {
-            if (val === undefined) return 1;
-            return typeof val === "string" ? parseInt(val, 10) : val;
-        })
-        .refine((val) => val >= 1 && val <= 100, { message: "Leverage must be between 1 and 100" }),
+        .transform(() => 1),
 });
 
 export type CreateTradeIntentInput = z.infer<typeof createTradeIntentSchema>;

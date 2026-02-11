@@ -54,11 +54,12 @@ const PRICE_POOLS: Record<string, { address: `0x${string}`; token0Decimals: numb
 };
 
 // Fallback prices (used when on-chain fetch fails)
+// Keep these in sync with lib/price-service.ts and lib/uniswap-v3.ts
 const FALLBACK_PRICES: Record<string, number> = {
-    BTC: 45000,
-    WBTC: 45000,
-    ETH: 3000,
-    WETH: 3000,
+    BTC: 97000,
+    WBTC: 97000,
+    ETH: 3400,
+    WETH: 3400,
 };
 
 /**
@@ -152,19 +153,41 @@ export async function getCurrentPrice(symbol: string): Promise<number> {
 
 /**
  * Get price history (simulated from current price)
- * In production, this would fetch from a price history API or database
+ * 
+ * ⚠ WARNING: This generates SYNTHETIC price history using deterministic variation
+ * around the current price. It is NOT real historical data. Agent strategies
+ * that rely on this for technical analysis (trend, breakout, mean-reversion)
+ * will produce signals based on simulated patterns, not actual market conditions.
+ * 
+ * For production, replace with a real price history API (e.g., CoinGecko /coins/{id}/market_chart).
  */
 export async function getPriceHistory(symbol: string, periods: number = 10): Promise<number[]> {
     const currentPrice = await getCurrentPrice(symbol);
 
-    // Generate simulated historical prices based on current price
-    // This adds slight variations to simulate price movement
+    // Use a deterministic seed based on symbol + truncated timestamp (changes every 5 min)
+    // This ensures agents get consistent signals within the same time window
+    const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000));
+    let seed = 0;
+    for (let i = 0; i < symbol.length; i++) {
+        seed = ((seed << 5) - seed + symbol.charCodeAt(i)) | 0;
+    }
+    seed = seed ^ timeBucket;
+
+    // Simple seeded PRNG (mulberry32)
+    const seededRandom = () => {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+
+    // Generate simulated historical prices with deterministic variation
     const prices: number[] = [];
     let price = currentPrice;
 
     for (let i = 0; i < periods; i++) {
-        // Add random variation (-2% to +2%)
-        const variation = (Math.random() - 0.5) * 0.04;
+        // Add deterministic variation (-2% to +2%)
+        const variation = (seededRandom() - 0.5) * 0.04;
         price = price * (1 - variation);
         prices.unshift(price); // Add to beginning (oldest first)
     }

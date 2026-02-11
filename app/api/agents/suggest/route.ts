@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeAgent } from "@/lib/agents";
 import { x402PaymentRequired } from "@/lib/x402-middleware";
-import { getPaymentAddress, getNetwork } from "@/lib/x402";
+import { getX402PaymentAddress, getX402Network } from "@/lib/x402-v2";
 import { getConsultancyFeeFormatted } from "@/lib/config/app";
 
 // Define PaymentPayload type locally (V2 compatible)
@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
   const handler = x402PaymentRequired(
     {
       price: CONSULTANCY_FEE,
-      network: getNetwork() as any,
-      payTo: getPaymentAddress(),
+      network: getX402Network() as any,
+      payTo: getX402PaymentAddress(),
       description: "AI Trading Consultancy - Get expert trading recommendation from AI agent",
       maxTimeoutSeconds: 60,
       metadata: {

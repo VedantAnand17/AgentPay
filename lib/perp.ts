@@ -63,6 +63,12 @@ export async function openPerpPositionOnBaseSepolia(args: {
       transport: http(BASE_SEPOLIA_RPC_URL),
     });
 
+    // Create public client for reading state and waiting for receipts
+    const publicClient = createPublicClient({
+      chain: baseSepolia,
+      transport: http(BASE_SEPOLIA_RPC_URL),
+    });
+
     // Convert size to wei (assuming size is in token units, adjust as needed)
     // For MVP, we'll use a simplified approach
     const sizeInWei = parseEther(args.size.toString());
@@ -73,7 +79,7 @@ export async function openPerpPositionOnBaseSepolia(args: {
     // - Add slippage protection
     // - Handle approvals if needed
     // - Parse actual return values from the contract
-    
+
     const hash = await client.writeContract({
       address: PERP_CONTRACT_ADDRESS as `0x${string}`,
       abi: PERP_ABI,
@@ -88,10 +94,6 @@ export async function openPerpPositionOnBaseSepolia(args: {
     });
 
     // Wait for transaction receipt
-    const publicClient = createPublicClient({
-      chain: baseSepolia,
-      transport: http(BASE_SEPOLIA_RPC_URL),
-    });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
     // Mock entry price calculation
@@ -119,7 +121,7 @@ export async function getCurrentPrice(symbol: string): Promise<number> {
     ETH: 3000,
     SOL: 150,
   };
-  
+
   return basePrices[symbol] || 30000;
 }
 

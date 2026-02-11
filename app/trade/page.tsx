@@ -3,20 +3,14 @@
 // Trade Console page with wagmi and x402 V2 integration
 // Supports smart contract approvals for automatic payments
 
-// Extend Window interface to include ethereum provider
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useAccount, useWalletClient, useDisconnect, useSwitchChain, useChainId } from "wagmi";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
-import { createWalletClient, custom, http } from "viem";
 import { baseSepolia } from "viem/chains";
 import { wrapFetchWithPayment } from "@x402/fetch";
-import { x402Client, x402HTTPClient } from "@x402/core/client";
+import { x402Client } from "@x402/core/client";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { Agent, TradeIntent, ExecutedTrade } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -232,12 +226,6 @@ export default function TradePage() {
       });
   }, []);
 
-  // Update userAddress when wallet connects
-  useEffect(() => {
-    if (address) {
-      // Address is automatically available from wagmi
-    }
-  }, [address]);
 
   const handleGetSuggestion = async () => {
     if (!selectedAgent || !symbol) {
@@ -455,52 +443,45 @@ export default function TradePage() {
         }
       }
 
-      // Create a fresh wallet client on the correct chain using the injected provider
-      if (typeof window === "undefined" || !window.ethereum) {
-        throw new Error("No wallet provider found. Please install MetaMask or another wallet.");
+      // Reuse the x402 client already created by the useMemo hook.
+      // Only rebuild if the memoized instance is unavailable (e.g. chain changed while modal was open).
+      let paymentFetch = fetchWithPayment;
+      if (!x402ClientInstance) {
+        // Fallback: build a one-time client for this payment
+        const client = new x402Client();
+        const signer = {
+          address: walletClient.account.address,
+          signTypedData: async (message: {
+            domain: Record<string, unknown>;
+            types: Record<string, unknown>;
+            primaryType: string;
+            message: Record<string, unknown>;
+          }) => {
+            return await walletClient.signTypedData({
+              account: walletClient.account,
+              domain: message.domain as any,
+              types: message.types as any,
+              primaryType: message.primaryType,
+              message: message.message,
+            });
+          },
+        };
+        registerExactEvmScheme(client, { signer });
+        paymentFetch = wrapFetchWithPayment(fetch, client);
       }
 
-      const freshWalletClient = createWalletClient({
-        account: walletClient.account,
-        chain: baseSepolia,
-        transport: custom(window.ethereum),
-      });
-
-      console.log("Using x402 V2 client for payment:", {
-        account: freshWalletClient.account?.address,
-        chain: freshWalletClient.chain?.name,
-        chainId: freshWalletClient.chain?.id,
+      console.log("Processing x402 V2 payment:", {
+        account: walletClient.account?.address,
+        chain: walletClient.chain?.name,
+        chainId,
         version: "V2",
         hasApproval: approvalStatus?.isApproved,
+        usingMemoizedClient: !!x402ClientInstance,
       });
-
-      // Create a fresh x402 V2 client with proper signer wrapper
-      const freshClient = new x402Client();
-      const freshSigner = {
-        address: freshWalletClient.account!.address,
-        signTypedData: async (message: {
-          domain: Record<string, unknown>;
-          types: Record<string, unknown>;
-          primaryType: string;
-          message: Record<string, unknown>;
-        }) => {
-          return await freshWalletClient.signTypedData({
-            account: freshWalletClient.account!,
-            domain: message.domain as any,
-            types: message.types as any,
-            primaryType: message.primaryType,
-            message: message.message,
-          });
-        },
-      };
-      registerExactEvmScheme(freshClient, { signer: freshSigner });
-
-      // Create x402-fetch wrapper - with pre-approval, this won't require signature popup
-      const freshFetchWithPayment = wrapFetchWithPayment(fetch, freshClient);
 
       // Use the x402-fetch to handle the payment
       // With smart contract pre-approval, no MetaMask popup required!
-      const resWithPayment = await freshFetchWithPayment(requestToProcess.url, requestToProcess.options);
+      const resWithPayment = await paymentFetch(requestToProcess.url, requestToProcess.options);
 
       if (!resWithPayment.ok) {
         const data = await resWithPayment.json();
@@ -645,8 +626,8 @@ export default function TradePage() {
           <div className="flex flex-col items-end gap-3">
             {/* System Status Indicator - shows real connection status */}
             <div className={`flex items-center gap-3 px-3 py-1.5 ${isConnected
-                ? 'bg-green-950/30 border border-green-500/30'
-                : 'bg-amber-950/30 border border-amber-500/30'
+              ? 'bg-green-950/30 border border-green-500/30'
+              : 'bg-amber-950/30 border border-amber-500/30'
               }`}>
               <Activity className={`w-4 h-4 animate-pulse ${isConnected ? 'text-green-500' : 'text-amber-500'
                 }`} />
@@ -932,7 +913,7 @@ export default function TradePage() {
                   {!suggestion && (
                     <div className="bg-blue-950/20 border border-blue-500/30 p-3 mb-2">
                       <div className="flex items-start gap-2">
-                        <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
                         <div>
                           <p className="text-xs font-mono text-blue-300/90">
                             <span className="font-bold uppercase tracking-wider">Step 1:</span> Pay $0.10 for AI Consultancy to get expert trading recommendation.
@@ -977,7 +958,7 @@ export default function TradePage() {
                       </div>
                       <div className="bg-green-950/20 border border-green-500/30 p-3">
                         <div className="flex items-start gap-2">
-                          <ArrowRight className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                          <ArrowRight className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
                           <div>
                             <p className="text-xs font-mono text-green-300/90">
                               <span className="font-bold uppercase tracking-wider">Step 2:</span> Review recommendation above, adjust parameters if needed, then proceed to trade execution below.

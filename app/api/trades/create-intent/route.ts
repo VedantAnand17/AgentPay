@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TradeIntent } from "@/lib/types";
 import { tradeIntents } from "@/lib/db";
-import { createX402PaymentRequest } from "@/lib/x402";
+import { getX402PaymentConfig } from "@/lib/x402-v2";
 import { randomBytes } from "crypto";
 import { calculateTradeFee } from "@/lib/config/app";
 import { createTradeIntentSchema, validateRequest } from "@/lib/validation";
@@ -45,18 +45,24 @@ export async function POST(request: NextRequest) {
       createdAt: Date.now(),
     };
 
-    // Create x402 payment request
-    const paymentRequest = createX402PaymentRequest(intent);
+    // Create x402 payment request metadata
+    const paymentConfig = getX402PaymentConfig(intent);
+    const paymentRequestId = `x402_${Date.now()}_${randomBytes(4).toString("hex")}`;
 
     // Store payment request ID on intent
-    intent.paymentRequestId = paymentRequest.paymentRequestId;
+    intent.paymentRequestId = paymentRequestId;
 
     // Save to database
     tradeIntents.create(intent);
 
     return NextResponse.json({
       tradeIntent: intent,
-      paymentRequest,
+      paymentRequest: {
+        paymentRequestId,
+        amount: intent.expectedPaymentAmount,
+        currency: "USD",
+        metadata: paymentConfig.metadata || {},
+      },
     });
   } catch (error: unknown) {
     logger.error("Error creating trade intent:", error);

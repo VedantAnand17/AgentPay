@@ -6,7 +6,6 @@ import {
   parseUnits,
   formatUnits,
   decodeEventLog,
-  encodeFunctionData,
 } from "viem";
 import { baseSepolia } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
@@ -314,12 +313,7 @@ export async function getSwapQuote(args: {
   amountIn: bigint;
   fee?: number;
 }): Promise<{ amountOut: bigint; priceImpact: number }> {
-  const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http(BASE_SEPOLIA_RPC_URL),
-  });
-
-  try {
+  return await withRpcFallback(async (publicClient) => {
     const result = await publicClient.simulateContract({
       address: UNISWAP_V3_QUOTER,
       abi: QUOTER_V2_ABI,
@@ -341,10 +335,7 @@ export async function getSwapQuote(args: {
     const priceImpact = 0; // Would need to compare with oracle price
 
     return { amountOut, priceImpact };
-  } catch (error: any) {
-    console.error("Quote error:", error);
-    throw new Error(`Failed to get quote: ${error.message}`);
-  }
+  }, "getSwapQuote");
 }
 
 /**
@@ -457,8 +448,11 @@ export async function executeUniswapV3Swap(args: {
         slippage: `${SLIPPAGE_TOLERANCE * 100}%`,
       });
     } catch (quoteError) {
-      console.warn("Could not get quote, using zero minimum:", quoteError);
-      amountOutMinimum = BigInt(0);
+      console.error("Could not get quote — aborting swap to prevent sandwich attacks:", quoteError);
+      throw new Error(
+        "Failed to get swap quote. Cannot execute swap without a minimum output amount (sandwich attack protection). " +
+        "Please try again or check pool liquidity."
+      );
     }
 
     // Execute swap

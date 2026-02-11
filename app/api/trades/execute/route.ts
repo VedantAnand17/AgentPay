@@ -18,10 +18,16 @@ const sanitizeErrorMessage = (error: unknown): string => {
   return "An error occurred while executing the trade";
 };
 
+// In-memory lock set to prevent concurrent execution of the same trade intent.
+// This prevents the race condition where multiple requests with the same
+// tradeIntentId could trigger duplicate swaps before the status is updated.
+const executingIntents = new Set<string>();
+
 async function executeTradeHandler(request: NextRequest, paymentInfo?: any, tradeIntentId?: string) {
+  let intentId: string | undefined;
   try {
     // Get tradeIntentId from parameter or request body
-    let intentId = tradeIntentId;
+    intentId = tradeIntentId;
     if (!intentId) {
       const body = await request.json();
       intentId = body.tradeIntentId;
@@ -34,12 +40,36 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any, trad
       );
     }
 
+    // --- Atomic guard: prevent double-execution ---
+    if (executingIntents.has(intentId)) {
+      return NextResponse.json(
+        { error: "Trade is already being executed. Please wait." },
+        { status: 409 }
+      );
+    }
+    executingIntents.add(intentId);
+
     // Load trade intent
     const intent = tradeIntents.getById(intentId);
     if (!intent) {
       return NextResponse.json(
         { error: "Trade intent not found" },
         { status: 404 }
+      );
+    }
+
+    // Reject if the intent has already been executed or is no longer pending
+    if (intent.status === "executed") {
+      return NextResponse.json(
+        { error: "This trade has already been executed." },
+        { status: 409 }
+      );
+    }
+
+    if (intent.status !== "pending" && intent.status !== "paid") {
+      return NextResponse.json(
+        { error: `Trade intent is in an unexpected state: ${intent.status}` },
+        { status: 400 }
       );
     }
 
@@ -92,6 +122,11 @@ async function executeTradeHandler(request: NextRequest, paymentInfo?: any, trad
       { error: sanitizeErrorMessage(error) },
       { status: 500 }
     );
+  } finally {
+    // Always release the execution lock so a failed trade can be retried
+    if (intentId) {
+      executingIntents.delete(intentId);
+    }
   }
 }
 

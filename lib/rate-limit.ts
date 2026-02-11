@@ -2,7 +2,14 @@
  * Rate Limiting Middleware
  * 
  * Simple in-memory rate limiting for API routes.
- * For production, consider using Redis or Upstash.
+ * 
+ * ⚠️  WARNING: This uses in-memory storage which does NOT persist across
+ * serverless function instances (e.g., Vercel). Each cold start gets a fresh
+ * rate limit map, and concurrent instances do not share state. For production
+ * deployments, replace this with a distributed solution such as:
+ * - Upstash Redis (@upstash/ratelimit)
+ * - Vercel KV
+ * - Cloudflare Workers KV
  */
 
 import { NextRequest, NextResponse } from "next/server";
